@@ -71,7 +71,7 @@ def ginf(V, L):
 V_values = np.linspace(-2, 2, 200)  # 100 points between -1 and 1
 
 # Compute ginf(V) for each V in the range
-ginf_values = [dg*ginf(V, L) for V in V_values]
+ginf_values = [dg*ginf(V, L)/L for V in V_values]
 
 # Plot ginf(V) vs V
 plt.figure(figsize=(8, 6))
