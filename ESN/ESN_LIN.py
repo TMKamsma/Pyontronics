@@ -14,6 +14,7 @@ class EchoStateNetwork:
         sparsity=0.5,
         input_scaling=1.0,
         regularization=1e-4,
+        activation=np.tanh
     ):
         """
         Initialize the Echo State Network with leaky integrator neurons
@@ -40,6 +41,7 @@ class EchoStateNetwork:
         self.sparsity = sparsity
         self.input_scaling = input_scaling
         self.regularization = regularization
+        self.activation = activation
 
         # Initialize weight matrices
         self.W_in = None  # Input weights
@@ -81,7 +83,7 @@ class EchoStateNetwork:
         # Collect reservoir states
         for t in range(n_samples):
             u = inputs[t]
-            x = (1 - self.leaking_rate * self.d / self.c) * x + (self.d / self.c) * np.tanh(
+            x = (1 - self.leaking_rate * self.d / self.c) * x + (self.d / self.c) * self.activation(
                 np.dot(self.W_in, u) + np.dot(self.W_res, x)
             )
             states[t] = x
@@ -122,7 +124,7 @@ class EchoStateNetwork:
 
         for t in range(n_samples):
             u = inputs[t]
-            x = (1 - self.leaking_rate * self.d / self.c) * x + (self.d / self.c) * np.tanh(
+            x = (1 - self.leaking_rate * self.d / self.c) * x + (self.d / self.c) * self.activation(
                 np.dot(self.W_in, u) + np.dot(self.W_res, x)
             )
             states[t] = x
