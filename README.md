@@ -1,4 +1,4 @@
-# ESN-with-Iontronics
+# Optimization and applications of echo state networks with leaky-integrator neurons
  
 badges met DOIs
 
@@ -37,16 +37,12 @@ regularization=1e-4,
 
 zelfde voor MG
 
-input_dim,
-reservoir_size,
-output_dim,
-a=1,
-d=0.3,
-c=1,
-spectral_radius=0.9,
-sparsity=0.5,
-input_scaling=1.0,
-regularization=1e-4,
+tau=17
+n=1000
+beta=0.2
+gamma=0.1
+n_samples=5000
+dt=1.0
 
 # License
 This extension is published under the MIT license.
