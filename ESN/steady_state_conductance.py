@@ -32,7 +32,7 @@ class GinfActivator:
         self.dg = -2 * self.w * ((self.Rb - self.Rt) / self.Rb) * self.Du
 
         self.V_values = np.linspace(V_min, V_max, num_points)
-        self.ginf_values = np.array([self.dg * self._compute_ginf(V) for V in self.V_values])
+        self.ginf_values = np.array([(self.dg * self._compute_ginf(V))/self.L for V in self.V_values])
 
     def _R(self, x):
         """ Computes R(x, L) """
