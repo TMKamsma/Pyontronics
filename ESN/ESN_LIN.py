@@ -30,6 +30,7 @@ class EchoStateNetwork:
         sparsity (float): Proportion of recurrent weights set to zero
         input_scaling (float): Scaling factor for input weights
         regularization (float): Regularization coefficient for ridge regression
+        activation (func): Activation function for ESN nodes
         """
         self.input_dim = input_dim
         self.reservoir_size = reservoir_size
@@ -133,7 +134,7 @@ class EchoStateNetwork:
         return outputs
 
 
-def mackey_glass(tau=17, n=1000, beta=0.2, gamma=0.1, n_samples=5000, dt=1.0):
+def mackey_glass(tau=17, n=1000, beta=0.2, gamma=0.1, n_samples=5000, dt=1.0, seed=None):
     """
     Generate Mackey-Glass time series
     Parameters:
@@ -143,8 +144,11 @@ def mackey_glass(tau=17, n=1000, beta=0.2, gamma=0.1, n_samples=5000, dt=1.0):
     n_samples (int): Number of samples to keep
     dt (float): Time step size
     """
+    if seed:
+        np.random.seed(seed)
+
     history_len = tau * 10  # Initialize sufficient history
-    values = np.zeros(history_len + n)
+    values = np.random.rand(history_len + n)
 
     # Initial condition (constant history)
     values[:history_len] = 1.1

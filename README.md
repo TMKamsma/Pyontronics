@@ -36,21 +36,11 @@ hier komt een uitleg van de parameters van de class
 
 $latex formule inclusief A D C$
 
-## Mackey-Glass Params
-
-zelfde voor MG
-
-tau=17
-n=1000
-beta=0.2
-gamma=0.1
-n_samples=5000
-dt=1.0
-
 # Figures
 
-<img src="output/mg_phase_space_plot.png" width=50% height=50%>
+<img src="output/ginf_activator_plot.png" width=50% height=50%>
 <img src="output/mg_prediction_plot.png" width=50% height=50%>
+<img src="output/mg_phase_space_plot.png" width=50% height=50%>
 <img src="output/sine_prediction_plot.png" width=50% height=50%>
 
 # License
