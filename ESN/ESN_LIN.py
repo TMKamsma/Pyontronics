@@ -7,9 +7,9 @@ class EchoStateNetwork:
         input_dim,
         reservoir_size,
         output_dim,
-        a=1,
-        d=0.3,
-        c=1,
+        leaking_rate=1,
+        step_size=0.3,
+        time_scale=1,
         spectral_radius=0.9,
         sparsity=0.5,
         input_scaling=1.0,
@@ -22,7 +22,9 @@ class EchoStateNetwork:
         input_dim (int): Dimension of input data
         reservoir_size (int): Number of neurons in the reservoir
         output_dim (int): Dimension of output data
-        leakage (float): Leakage rate (0-1) for neuron updates
+        leaking_rate (float): (a) Self coupling constant
+        step_size (float): (d) Time step size
+        time_scale (float): (c) Scale of time evolution
         spectral_radius (float): Spectral radius of reservoir weight matrix
         sparsity (float): Proportion of recurrent weights set to zero
         input_scaling (float): Scaling factor for input weights
@@ -31,9 +33,9 @@ class EchoStateNetwork:
         self.input_dim = input_dim
         self.reservoir_size = reservoir_size
         self.output_dim = output_dim
-        self.a = a
-        self.d = d
-        self.c = c
+        self.leaking_rate = leaking_rate
+        self.d = step_size
+        self.c = time_scale
         self.spectral_radius = spectral_radius
         self.sparsity = sparsity
         self.input_scaling = input_scaling
@@ -79,7 +81,7 @@ class EchoStateNetwork:
         # Collect reservoir states
         for t in range(n_samples):
             u = inputs[t]
-            x = (1 - self.a * self.d / self.c) * x + (self.d / self.c) * np.tanh(
+            x = (1 - self.leaking_rate * self.d / self.c) * x + (self.d / self.c) * np.tanh(
                 np.dot(self.W_in, u) + np.dot(self.W_res, x)
             )
             states[t] = x
@@ -120,7 +122,7 @@ class EchoStateNetwork:
 
         for t in range(n_samples):
             u = inputs[t]
-            x = (1 - self.a * self.d / self.c) * x + (self.d / self.c) * np.tanh(
+            x = (1 - self.leaking_rate * self.d / self.c) * x + (self.d / self.c) * np.tanh(
                 np.dot(self.W_in, u) + np.dot(self.W_res, x)
             )
             states[t] = x
