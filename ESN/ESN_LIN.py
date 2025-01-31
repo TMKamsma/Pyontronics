@@ -14,7 +14,7 @@ class EchoStateNetwork:
         sparsity=0.5,
         input_scaling=1.0,
         regularization=1e-4,
-        activation=np.tanh
+        activation=np.tanh,
     ):
         """
         Initialize the Echo State Network with leaky integrator neurons
@@ -36,8 +36,8 @@ class EchoStateNetwork:
         self.reservoir_size = reservoir_size
         self.output_dim = output_dim
         self.leaking_rate = leaking_rate
-        self.d = step_size
-        self.c = time_scale
+        self.step_size = step_size
+        self.time_scale = time_scale
         self.spectral_radius = spectral_radius
         self.sparsity = sparsity
         self.input_scaling = input_scaling
@@ -59,7 +59,6 @@ class EchoStateNetwork:
 
         # Initialize reservoir weights with desired sparsity
         self.W_res = np.random.rand(self.reservoir_size, self.reservoir_size) - 0.5
-        # Set sparsity
         sparsity_mask = np.random.rand(*self.W_res.shape) < self.sparsity
         self.W_res[sparsity_mask] = 0
 
@@ -67,6 +66,11 @@ class EchoStateNetwork:
         max_eig = np.max(np.abs(np.linalg.eigvals(self.W_res)))
         if max_eig != 0:
             self.W_res *= self.spectral_radius / max_eig
+
+    def _apply_reservoir_dynamics(self, x, u):
+        return (1 - self.leaking_rate * self.step_size / self.time_scale) * x + (
+                self.step_size / self.time_scale
+            ) * self.activation(np.dot(self.W_in, u) + np.dot(self.W_res, x))
 
     def fit(self, inputs, targets, washout=100):
         """
@@ -84,9 +88,7 @@ class EchoStateNetwork:
         # Collect reservoir states
         for t in range(n_samples):
             u = inputs[t]
-            x = (1 - self.leaking_rate * self.d / self.c) * x + (self.d / self.c) * self.activation(
-                np.dot(self.W_in, u) + np.dot(self.W_res, x)
-            )
+            x = self._apply_reservoir_dynamics(x, u)
             states[t] = x
 
         # Discard washout period
@@ -101,6 +103,7 @@ class EchoStateNetwork:
         X_T = X.T
         A = np.dot(X_T, X) + self.regularization * np.eye(self.reservoir_size)
         B = np.dot(X_T, Y)
+
         self.W_out = np.linalg.solve(A, B).T
 
     def predict(self, inputs, initial_state=None):
@@ -125,42 +128,8 @@ class EchoStateNetwork:
 
         for t in range(n_samples):
             u = inputs[t]
-            x = (1 - self.leaking_rate * self.d / self.c) * x + (self.d / self.c) * self.activation(
-                np.dot(self.W_in, u) + np.dot(self.W_res, x)
-            )
+            x = self._apply_reservoir_dynamics(x, u)
             states[t] = x
             outputs[t] = np.dot(self.W_out, x)
 
         return outputs
-
-
-def mackey_glass(tau=17, n=1000, beta=0.2, gamma=0.1, n_samples=5000, dt=1.0, seed=None):
-    """
-    Generate Mackey-Glass time series
-    Parameters:
-    tau (int): Time delay
-    n (int): Number of points to generate
-    beta, gamma (float): Equation parameters
-    n_samples (int): Number of samples to keep
-    dt (float): Time step size
-    """
-    if seed:
-        np.random.seed(seed)
-
-    history_len = tau * 10  # Initialize sufficient history
-    values = np.random.rand(history_len + n)
-
-    # Initial condition (constant history)
-    values[:history_len] = 1.1
-
-    delay_steps = int(tau / dt)
-    if delay_steps <= 0:
-        delay_steps = 1
-
-    for t in range(history_len, history_len + n - 1):
-        x_tau = values[t - delay_steps]
-        dx_dt = beta * x_tau / (1 + x_tau**10) - gamma * values[t]
-        values[t + 1] = values[t] + dx_dt * dt
-
-    # Discard transient and return requested number of samples
-    return values[history_len : history_len + n_samples]
