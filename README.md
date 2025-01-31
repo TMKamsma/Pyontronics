@@ -6,6 +6,8 @@ auteurs
 
 practisch de abstract maar dan zonder plagiaat van jezelf
 
+ook uitleg $g_{\text{inf}}(V) = \int_0^L g(x, V) \, dx$
+
 ## uitleg unique contribution
 
 uitleg
@@ -22,17 +24,17 @@ filetree
 
 hier komt een uitleg van de parameters van de class
 
-- input_dim (int): Dimension of input data
-- reservoir_size (int): Number of neurons in the reservoir
-- output_dim (int): Dimension of output data
-- leaking_rate (float): (a) Self coupling constant
-- step_size (float): (d) Time step size
-- time_scale (float): (c) Scale of time evolution
-- spectral_radius (float): Spectral radius of reservoir weight matrix
-- sparsity (float): Proportion of recurrent weights set to zero
-- input_scaling (float): Scaling factor for input weights
-- regularization (float): Regularization coefficient for ridge regression
-- activation (func): Activation function for ESN nodes
+- input_dim: Dimension of input data
+- reservoir_size: Number of neurons in the reservoir
+- output_dim: Dimension of output data
+- leaking_rate: (a) Self coupling constant
+- step_size: (d) Time step size
+- time_scale: (c) Scale of time evolution
+- spectral_radius: Spectral radius of reservoir weight matrix
+- sparsity: Proportion of recurrent weights set to zero
+- input_scaling: Scaling factor for input weights
+- regularization: Regularization coefficient for ridge regression
+- activation: Activation function for ESN nodes
 
 $latex formule inclusief A D C$
 
