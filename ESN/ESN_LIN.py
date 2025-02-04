@@ -32,6 +32,7 @@ class EchoStateNetwork:
         regularization (float): Regularization coefficient for ridge regression
         activation (func): Activation function for ESN nodes
         """
+
         self.input_dim = input_dim
         self.reservoir_size = reservoir_size
         self.output_dim = output_dim
@@ -43,6 +44,11 @@ class EchoStateNetwork:
         self.input_scaling = input_scaling
         self.regularization = regularization
         self.activation = activation
+
+        if leaking_rate * (step_size / time_scale) > 1:
+            raise ValueError(
+                "Invalid parameter combination: leaking_rate * (step_size / time_scale) must be ≤ 1."
+            )
 
         # Initialize weight matrices
         self.W_in = None  # Input weights
@@ -69,8 +75,8 @@ class EchoStateNetwork:
 
     def _apply_reservoir_dynamics(self, x, u):
         return (1 - self.leaking_rate * self.step_size / self.time_scale) * x + (
-                self.step_size / self.time_scale
-            ) * self.activation(np.dot(self.W_in, u) + np.dot(self.W_res, x))
+            self.step_size / self.time_scale
+        ) * self.activation(np.dot(self.W_in, u) + np.dot(self.W_res, x))
 
     def fit(self, inputs, targets, washout=100):
         """
