@@ -139,3 +139,30 @@ class EchoStateNetwork:
             outputs[t] = np.dot(self.W_out, x)
 
         return outputs
+
+    def visualize_reservoir(self):
+        import networkx as nx
+        import matplotlib.pyplot as plt
+
+        G = nx.DiGraph()
+
+        for i in range(self.reservoir_size):
+            G.add_node(i)
+
+        for i in range(self.reservoir_size):
+            for j in range(self.reservoir_size):
+                weight = self.W_res[i, j]
+                if weight != 0:
+                    G.add_edge(i, j, weight=weight)
+
+        plt.figure(figsize=(6, 6))
+        pos = nx.spring_layout(G)
+
+        nx.draw_networkx_nodes(G, pos, node_size=400, node_color="skyblue", edgecolors="black")
+
+        edges = G.edges(data=True)
+        edge_colors = [d["weight"] for (_, _, d) in edges]
+        nx.draw_networkx_edges(G, pos, edgelist=edges, arrowstyle="-|>", alpha=0.8, edge_color=edge_colors, edge_cmap=plt.cm.Blues)
+
+        plt.title("Echo State Network Reservoir Visualization")
+        plt.show()
