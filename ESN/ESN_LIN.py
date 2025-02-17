@@ -32,6 +32,7 @@ class EchoStateNetwork:
         input_scaling (float): Scaling factor for input weights
         regularization (float): Regularization coefficient for ridge regression
         activation (func): Activation function for ESN nodes
+        guarantee_ESP (bool): Guarantee Echo State properties
         """
 
         self.input_dim = input_dim
@@ -57,6 +58,7 @@ class EchoStateNetwork:
                 raise ValueError(
                     "Invalid spectral radius: spectral radius must be < 1 to guarantee ESP. Decrease spectral radius or turn off guarantee_ESP."
                 )
+
         # Initialize weight matrices
         self.W_in = None  # Input weights
         self.W_res = None  # Reservoir weights
@@ -64,22 +66,19 @@ class EchoStateNetwork:
 
         self._initialize_weights()
 
-# =============================================================================
-#         if self.guarantee_ESP:
-#             # Check for Echo State Property guarantee (Proposition 1, Jager et al. 2007, Neural Networks)
-#             _, S, _ = np.linalg.svd(self.W_res)
-# 
-#             if (
-#                 abs(
-#                     1
-#                     - self.step_size / self.time_scale * (self.leaking_rate - np.max(S))
-#                 )
-#                 > 1
-#             ):
-#                 raise ValueError(
-#                     f"Invalid parameter combination: abs(1-step_size/time_scale*(leaking_rate-np.max(S))) must be < 1 and now is {round(abs(1 - self.step_size / self.time_scale * (self.leaking_rate - np.max(S))),4)}. Echo State Property not guaranteed."
-#                 )
-# =============================================================================
+        # if self.guarantee_ESP:
+        #     # Check for Echo State Property guarantee (Proposition 1, Jager et al. 2007, Neural Networks)
+        #     _, S, _ = np.linalg.svd(self.W_res)
+        #     if (
+        #         abs(
+        #             1
+        #             - self.step_size / self.time_scale * (self.leaking_rate - np.max(S))
+        #         )
+        #         > 1
+        #     ):
+        #         raise ValueError(
+        #             f"Invalid parameter combination: abs(1-step_size/time_scale*(leaking_rate-np.max(S))) must be < 1 and now is {round(abs(1 - self.step_size / self.time_scale * (self.leaking_rate - np.max(S))),4)}. Echo State Property not guaranteed."
+        #         )
 
     def _initialize_weights(self, seed=42):
         np.random.seed(seed)
@@ -184,88 +183,108 @@ class EchoStateNetwork:
     def visualize_reservoir(self, draw_labels=False):
         import networkx as nx
         import matplotlib.pyplot as plt
-
+        
         G = nx.DiGraph()
-
-        # Define node lists for clarity
+        
         input_nodes = [f"inp_{i}" for i in range(self.input_dim)]
         reservoir_nodes = [f"res_{i}" for i in range(self.reservoir_size)]
         output_nodes = [f"out_{i}" for i in range(self.output_dim)]
-
-        # Add nodes
+        
         G.add_nodes_from(input_nodes)
         G.add_nodes_from(reservoir_nodes)
         G.add_nodes_from(output_nodes)
-
-        # Build edges
+        
         for i in range(self.reservoir_size):
             for j in range(self.input_dim):
                 w = self.W_in[i, j]
                 if w != 0:
                     G.add_edge(input_nodes[j], reservoir_nodes[i], weight=w)
-
+        
         for i in range(self.reservoir_size):
             for j in range(self.reservoir_size):
                 w = self.W_res[i, j]
                 if w != 0:
                     G.add_edge(reservoir_nodes[j], reservoir_nodes[i], weight=w)
-
+        
         for i in range(self.output_dim):
             for j in range(self.reservoir_size):
                 w = self.W_out[i, j]
                 if w != 0:
                     G.add_edge(reservoir_nodes[j], output_nodes[i], weight=w)
-
-        # Position nodes:
-        # Inputs at x=0, outputs at x=2, reservoir in a spring layout around x=1
+        
         pos = {}
         for idx, node in enumerate(input_nodes):
             pos[node] = (0, -idx)
         for idx, node in enumerate(output_nodes):
             pos[node] = (2, -idx)
-
-        # Spring layout for reservoir subgraph, then shift x ~ +1
+        
         reservoir_subgraph = G.subgraph(reservoir_nodes)
-        pos_res = nx.spring_layout(reservoir_subgraph, k=0.8, scale=0.5)
-        for node, (x, y) in pos_res.items():
-            pos[node] = (x + 1, y)
+        pos_res = nx.spring_layout(reservoir_subgraph, k=0.9, scale=0.5)
+        for node, (x_coord, y_coord) in pos_res.items():
+            pos[node] = (x_coord + 1, y_coord)
+        
+        plt.figure(figsize=(9, 7))
+        nx.draw_networkx_nodes(G, pos, nodelist=input_nodes,
+                            node_color="lightblue", node_size=500, edgecolors="black")
+        nx.draw_networkx_nodes(G, pos, nodelist=reservoir_nodes,
+                            node_color="lightgreen", node_size=500, edgecolors="black")
+        nx.draw_networkx_nodes(G, pos, nodelist=output_nodes,
+                            node_color="lightcoral", node_size=500, edgecolors="black")
 
-        # Draw nodes
-        plt.figure(figsize=(8, 6))
-        nx.draw_networkx_nodes(G, pos, nodelist=input_nodes, node_color="lightblue",
-                            node_size=400, edgecolors="black")
-        nx.draw_networkx_nodes(G, pos, nodelist=reservoir_nodes, node_color="lightgreen",
-                            node_size=400, edgecolors="black")
-        nx.draw_networkx_nodes(G, pos, nodelist=output_nodes, node_color="lightcoral",
-                            node_size=400, edgecolors="black")
-
-        # Separate edges by type, then color them accordingly
         in2res_edges = []
         res2res_edges = []
         res2out_edges = []
-
+        in2res_weights = []
+        res2res_weights = []
+        res2out_weights = []
+        
         for (src, dst, data) in G.edges(data=True):
+            w = data["weight"]
             if src in input_nodes and dst in reservoir_nodes:
                 in2res_edges.append((src, dst))
+                in2res_weights.append(w)
             elif src in reservoir_nodes and dst in reservoir_nodes:
                 res2res_edges.append((src, dst))
+                res2res_weights.append(w)
             elif src in reservoir_nodes and dst in output_nodes:
                 res2out_edges.append((src, dst))
+                res2out_weights.append(w)
 
-        nx.draw_networkx_edges(
-            G, pos, edgelist=in2res_edges, arrowstyle="-|>", alpha=0.8, edge_color="lightblue"
-        )
-        nx.draw_networkx_edges(
-            G, pos, edgelist=res2res_edges, arrowstyle="-|>", alpha=0.8, edge_color="green"
-        )
-        nx.draw_networkx_edges(
-            G, pos, edgelist=res2out_edges, arrowstyle="-|>", alpha=0.8, edge_color="red"
-        )
+        def get_edge_colors_and_alphas(weights, base_color):
+            """ Return list of RGBA colors with alpha scaled by |weight|. """
+            max_w = max(abs(w) for w in weights) if weights else 1e-9
+            colors = []
+            for w in weights:
+                alpha = 0.1 + 0.9 * (abs(w) / max_w)
+                import matplotlib.colors as mcolors
+                rgba = list(mcolors.to_rgba(base_color))
+                rgba[-1] = alpha
+                colors.append(rgba)
+            return colors
 
-        # Optionally draw labels
+        in2res_colors = get_edge_colors_and_alphas(in2res_weights, "lightblue")
+        res2res_colors = get_edge_colors_and_alphas(res2res_weights, "green")
+        res2out_colors = get_edge_colors_and_alphas(res2out_weights, "red")
+        
+        nx.draw_networkx_edges(G, pos,
+                            edgelist=in2res_edges,
+                            edge_color=in2res_colors,
+                            arrowstyle="-|>",
+                            arrowsize=10)
+        nx.draw_networkx_edges(G, pos,
+                            edgelist=res2res_edges,
+                            edge_color=res2res_colors,
+                            arrowstyle="-|>",
+                            arrowsize=10)
+        nx.draw_networkx_edges(G, pos,
+                            edgelist=res2out_edges,
+                            edge_color=res2out_colors,
+                            arrowstyle="-|>",
+                            arrowsize=10)
+        
         if draw_labels:
             nx.draw_networkx_labels(G, pos, font_size=8)
-
+        
         plt.title("ESN Visualization: Input (left), Reservoir (middle), Output (right)")
         plt.axis("off")
         plt.show()
