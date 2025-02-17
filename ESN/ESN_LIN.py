@@ -70,7 +70,7 @@ class EchoStateNetwork:
                 > 1
             ):
                 raise ValueError(
-                    f"Invalid parameter combination: abs(1-step_size/time_scale*(leaking_rate-np.max(S))) must be < 1 and now is {abs(1 - self.step_size / self.time_scale * (self.leaking_rate - np.max(S)))}. Echo State Property not guaranteed."
+                    f"Invalid parameter combination: abs(1-step_size/time_scale*(leaking_rate-np.max(S))) must be < 1 and now is {round(abs(1 - self.step_size / self.time_scale * (self.leaking_rate - np.max(S))),4)}. Echo State Property not guaranteed."
                 )
 
     def _initialize_weights(self):
