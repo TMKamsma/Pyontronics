@@ -57,16 +57,22 @@ class EchoStateNetwork:
         self.W_out = None  # Output weights
 
         self._initialize_weights()
-        
-        # Check for Echo State Property (Proposition 1, Jager et al. 2007, Neural Networks)
-        U, S, Vh = np.linalg.svd(self.W_res)
-        
+
         if check_for_ESP:
-            if abs(1-self.step_size/self.time_scale*(self.leaking_rate-np.max(S))) > 1:
-                raise ValueError(
-                    f"Invalid parameter combination: abs(1-step_size/time_scale*(leaking_rate-np.max(S))) must be < 1 and now is {abs(1-self.step_size/self.time_scale*(self.leaking_rate-np.max(S)))}. Echo State Property not guaranteed."
+            # Check for Echo State Property (Proposition 1, Jager et al. 2007, Neural Networks)
+            _, S, _ = np.linalg.svd(self.W_res)
+
+            if (
+                abs(
+                    1
+                    - self.step_size / self.time_scale * (self.leaking_rate - np.max(S))
                 )
-        
+                > 1
+            ):
+                raise ValueError(
+                    f"Invalid parameter combination: abs(1-step_size/time_scale*(leaking_rate-np.max(S))) must be < 1 and now is {abs(1 - self.step_size / self.time_scale * (self.leaking_rate - np.max(S)))}. Echo State Property not guaranteed."
+                )
+
     def _initialize_weights(self):
         # Initialize input weights
         self.W_in = (
@@ -77,14 +83,12 @@ class EchoStateNetwork:
         self.W_res = np.random.rand(self.reservoir_size, self.reservoir_size) - 0.5
         sparsity_mask = np.random.rand(*self.W_res.shape) < self.sparsity
         self.W_res[sparsity_mask] = 0
-        
+
         # Adjust spectral radius
         max_eig = np.max(np.abs(np.linalg.eigvals(self.W_res)))
         if max_eig != 0:
             self.W_res *= self.spectral_radius / max_eig
-            
-        
-        
+
     def _apply_reservoir_dynamics(self, x, u):
         return (1 - self.leaking_rate * self.step_size / self.time_scale) * x + (
             self.step_size / self.time_scale
@@ -170,11 +174,21 @@ class EchoStateNetwork:
         plt.figure(figsize=(6, 6))
         pos = nx.spring_layout(G)
 
-        nx.draw_networkx_nodes(G, pos, node_size=400, node_color="skyblue", edgecolors="black")
+        nx.draw_networkx_nodes(
+            G, pos, node_size=400, node_color="skyblue", edgecolors="black"
+        )
 
         edges = G.edges(data=True)
         edge_colors = [d["weight"] for (_, _, d) in edges]
-        nx.draw_networkx_edges(G, pos, edgelist=edges, arrowstyle="-|>", alpha=0.8, edge_color=edge_colors, edge_cmap=plt.cm.Blues)
+        nx.draw_networkx_edges(
+            G,
+            pos,
+            edgelist=edges,
+            arrowstyle="-|>",
+            alpha=0.8,
+            edge_color=edge_colors,
+            edge_cmap=plt.cm.Blues,
+        )
 
         plt.title("Echo State Network Reservoir Visualization")
         plt.show()
