@@ -15,6 +15,7 @@ class EchoStateNetwork:
         input_scaling=1.0,
         regularization=1e-4,
         activation=np.tanh,
+        check_for_ESP=True,
     ):
         """
         Initialize the Echo State Network with leaky integrator neurons
@@ -56,7 +57,16 @@ class EchoStateNetwork:
         self.W_out = None  # Output weights
 
         self._initialize_weights()
-
+        
+        # Check for Echo State Property (Proposition 1, Jager et al. 2007, Neural Networks)
+        U, S, Vh = np.linalg.svd(self.W_res)
+        
+        if check_for_ESP:
+            if abs(1-self.step_size/self.time_scale*(self.leaking_rate-np.max(S))) > 1:
+                raise ValueError(
+                    f"Invalid parameter combination: abs(1-step_size/time_scale*(leaking_rate-np.max(S))) must be < 1 and now is {abs(1-self.step_size/self.time_scale*(self.leaking_rate-np.max(S)))}. Echo State Property not guaranteed."
+                )
+        
     def _initialize_weights(self):
         # Initialize input weights
         self.W_in = (
@@ -67,12 +77,14 @@ class EchoStateNetwork:
         self.W_res = np.random.rand(self.reservoir_size, self.reservoir_size) - 0.5
         sparsity_mask = np.random.rand(*self.W_res.shape) < self.sparsity
         self.W_res[sparsity_mask] = 0
-
+        
         # Adjust spectral radius
         max_eig = np.max(np.abs(np.linalg.eigvals(self.W_res)))
         if max_eig != 0:
             self.W_res *= self.spectral_radius / max_eig
-
+            
+        
+        
     def _apply_reservoir_dynamics(self, x, u):
         return (1 - self.leaking_rate * self.step_size / self.time_scale) * x + (
             self.step_size / self.time_scale
