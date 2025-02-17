@@ -1,5 +1,5 @@
 import numpy as np
-
+import random
 
 class EchoStateNetwork:
     def __init__(
@@ -15,7 +15,7 @@ class EchoStateNetwork:
         input_scaling=1.0,
         regularization=1e-4,
         activation=np.tanh,
-        check_for_ESP=True,
+        guarantee_ESP=True,
     ):
         """
         Initialize the Echo State Network with leaky integrator neurons
@@ -45,12 +45,18 @@ class EchoStateNetwork:
         self.input_scaling = input_scaling
         self.regularization = regularization
         self.activation = activation
+        self.guarantee_ESP = guarantee_ESP
 
         if leaking_rate * (step_size / time_scale) > 1:
             raise ValueError(
                 "Invalid parameter combination: leaking_rate * (step_size / time_scale) must be ≤ 1."
             )
-
+            
+        if guarantee_ESP:
+            if self.spectral_radius >= 1:
+                raise ValueError(
+                    "Invalid spectral radius: spectral radius must be < 1 to guarantee ESP. Decrease spectral radius or turn off guarantee_ESP."
+                )
         # Initialize weight matrices
         self.W_in = None  # Input weights
         self.W_res = None  # Reservoir weights
@@ -58,20 +64,22 @@ class EchoStateNetwork:
 
         self._initialize_weights()
 
-        if check_for_ESP:
-            # Check for Echo State Property (Proposition 1, Jager et al. 2007, Neural Networks)
-            _, S, _ = np.linalg.svd(self.W_res)
-
-            if (
-                abs(
-                    1
-                    - self.step_size / self.time_scale * (self.leaking_rate - np.max(S))
-                )
-                > 1
-            ):
-                raise ValueError(
-                    f"Invalid parameter combination: abs(1-step_size/time_scale*(leaking_rate-np.max(S))) must be < 1 and now is {round(abs(1 - self.step_size / self.time_scale * (self.leaking_rate - np.max(S))),4)}. Echo State Property not guaranteed."
-                )
+# =============================================================================
+#         if self.guarantee_ESP:
+#             # Check for Echo State Property guarantee (Proposition 1, Jager et al. 2007, Neural Networks)
+#             _, S, _ = np.linalg.svd(self.W_res)
+# 
+#             if (
+#                 abs(
+#                     1
+#                     - self.step_size / self.time_scale * (self.leaking_rate - np.max(S))
+#                 )
+#                 > 1
+#             ):
+#                 raise ValueError(
+#                     f"Invalid parameter combination: abs(1-step_size/time_scale*(leaking_rate-np.max(S))) must be < 1 and now is {round(abs(1 - self.step_size / self.time_scale * (self.leaking_rate - np.max(S))),4)}. Echo State Property not guaranteed."
+#                 )
+# =============================================================================
 
     def _initialize_weights(self):
         # Initialize input weights
@@ -80,15 +88,30 @@ class EchoStateNetwork:
         ) * self.input_scaling
 
         # Initialize reservoir weights with desired sparsity
-        self.W_res = np.random.rand(self.reservoir_size, self.reservoir_size) - 0.5
+        
+        # If guarantee_ESP is true, use ESP recipe from Yildiz et al., 2012, Neural Networks
+        # guarantee_ESP step 1: generate matrix with elements w ≥ 0
+        if self.guarantee_ESP:
+            matrix_centering = 0
+        else:
+            matrix_centering = -0.5
+        
+        self.W_res = np.random.rand(self.reservoir_size, self.reservoir_size) + matrix_centering
         sparsity_mask = np.random.rand(*self.W_res.shape) < self.sparsity
         self.W_res[sparsity_mask] = 0
 
-        # Adjust spectral radius
+        # Adjust spectral radius (also step 2 of guarantee_ESP)
         max_eig = np.max(np.abs(np.linalg.eigvals(self.W_res)))
         if max_eig != 0:
             self.W_res *= self.spectral_radius / max_eig
-
+        
+        # guarantee_ESP step 3: switch the sign of each matrix elements with probability of 0.5
+        if self.guarantee_ESP:
+            for i in range(len(self.W_res)):
+                for j in range(len(self.W_res[i])):
+                    if random.random() < 0.5:
+                        self.W_res[i][j]=-self.W_res[i][j]
+                    
     def _apply_reservoir_dynamics(self, x, u):
         return (1 - self.leaking_rate * self.step_size / self.time_scale) * x + (
             self.step_size / self.time_scale
