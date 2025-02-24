@@ -6,3 +6,4 @@ optuna-dashboard
 IProgress
 ipywidgets
 scipy
+tqdm

@@ -161,3 +161,4 @@ cython_debug/
 
 output/*.pdf
 optuna_esn_MG.db
+data/
