@@ -15,6 +15,7 @@ class EchoStateNetwork:
         sparsity=0.5,
         input_scaling=1.0,
         regularization=1e-4,
+        weight_seed=42,
         activation=np.tanh,
         guarantee_ESP=True,
     ):
@@ -59,6 +60,7 @@ class EchoStateNetwork:
         self.sparsity = sparsity
         self.input_scaling = input_scaling
         self.regularization = regularization
+        self.weight_seed = weight_seed
         self.activation = activation
         self.guarantee_ESP = guarantee_ESP
 
@@ -75,12 +77,14 @@ class EchoStateNetwork:
         """Checks whether the chosen parameters are valid."""
         if self.leaking_rate * (self.step_size / self.time_scale) > 1:
             raise ValueError("leaking_rate * (step_size / time_scale) must be ≤ 1.")
-        if self.guarantee_ESP and self.spectral_radius >= 1:
-            raise ValueError("spectral_radius must be < 1 if guarantee_ESP is True.")
+        
+        # Equivalent to step 2 of Yildiz et al. 2012 algorithm
+        if self.guarantee_ESP and self.spectral_radius >= self.leaking_rate:
+           raise ValueError("spectral_radius must be < leaking_rate if guarantee_ESP is True.")
 
-    def _initialize_all_weights(self, seed=42):
+    def _initialize_all_weights(self):
         """Initializes input and reservoir weights, then adjusts spectral radius."""
-        np.random.seed(seed)
+        np.random.seed(self.weight_seed)
 
         # Input weights
         self.W_in = self._initialize_input_weights()
@@ -91,9 +95,21 @@ class EchoStateNetwork:
         # Adjust spectral radius
         self._apply_spectral_radius()
 
-        # Sign switching if guaranteeing ESP
+        # Sign switching if guaranteeing ESP (step 3 of Yildiz et al. 2012 algorithm)
         if self.guarantee_ESP:
             self._random_sign_switch()
+        
+        print(np.max(np.abs(np.linalg.eigvals((self.step_size / self.time_scale)*np.absolute(self.W_res)-(1-self.leaking_rate * (self.step_size / self.time_scale))*np.identity(self.reservoir_size)))))
+        print(np.max(np.abs(np.linalg.eigvals(self.W_res))))
+        
+        max_eig_M = np.max(np.abs(np.linalg.eigvals((self.step_size / self.time_scale)*np.absolute(self.W_res)-(1-self.leaking_rate * (self.step_size / self.time_scale))*np.identity(self.reservoir_size))))
+        
+        # Notify if ESP is still guaranteed
+        if self.guarantee_ESP is False:
+            if max_eig_M < 1:
+                print("This initilization has the echo state property")
+            else:
+                print("This initilization might not have the echo state property")
 
     def _initialize_input_weights(self):
         """Creates input weight matrix of shape (reservoir_size, input_dim)."""
@@ -106,7 +122,7 @@ class EchoStateNetwork:
         Creates a sparse reservoir weight matrix of shape
         (reservoir_size, reservoir_size).
         """
-        # If guaranteeing ESP, shift matrix to be initially ≥ 0 for Yildiz et al. approach
+        # If guaranteeing ESP, shift matrix to be initially ≥ 0 for (step 1 Yildiz et al. 2012 algorithm)
         shift = 0.0 if self.guarantee_ESP else -0.5
         W_res = np.random.rand(self.reservoir_size, self.reservoir_size) + shift
 
