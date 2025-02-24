@@ -1,5 +1,6 @@
 import numpy as np
 import random
+from tqdm import tqdm
 
 
 class EchoStateNetwork:
@@ -18,6 +19,7 @@ class EchoStateNetwork:
         weight_seed=42,
         activation=np.tanh,
         guarantee_ESP=True,
+        progress_bar=True
     ):
         """
         Echo State Network with optional guarantee of the Echo State Property (ESP).
@@ -63,6 +65,7 @@ class EchoStateNetwork:
         self.weight_seed = weight_seed
         self.activation = activation
         self.guarantee_ESP = guarantee_ESP
+        self.progress_bar = not progress_bar
 
         self._check_parameters()
 
@@ -177,7 +180,7 @@ class EchoStateNetwork:
         x = np.zeros(self.reservoir_size)
 
         # Collect reservoir states
-        for t in range(n_samples):
+        for t in tqdm(range(n_samples), desc="Collecting reservoir states", disable=self.progress_bar):
             x = self._apply_reservoir_dynamics(x, inputs[t])
             states[t] = x
 
@@ -253,9 +256,9 @@ class EchoStateNetwork:
         # Layout for drawing
         pos = {}
         for idx, node in enumerate(input_nodes):
-            pos[node] = (0, -idx)
+            pos[node] = (0, -(idx - (len(input_nodes) - 1) / 2) * 0.1)
         for idx, node in enumerate(output_nodes):
-            pos[node] = (2, -idx)
+            pos[node] = (2, -(idx - (len(output_nodes) - 1) / 2) * 0.1)
 
         # Spring layout for reservoir in the middle
         pos_res = nx.spring_layout(G.subgraph(reservoir_nodes), k=0.9, scale=0.5)
