@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def mackey_glass(tau=17, n=1000, beta=0.2, gamma=0.1, n_samples=5000, dt=1.0, seed=None):
+def MackeyGlassGenerator(tau=17, n=1000, beta=0.2, gamma=0.1, n_samples=5000, dt=1.0, seed=None):
     """
     Generate Mackey-Glass time series
     Parameters:
@@ -14,10 +14,9 @@ def mackey_glass(tau=17, n=1000, beta=0.2, gamma=0.1, n_samples=5000, dt=1.0, se
     if seed:
         np.random.seed(seed)
 
-    history_len = tau * 10  # Initialize sufficient history
+    history_len = tau * 10
     values = np.random.rand(history_len + n)
 
-    # Initial condition (constant history)
     values[:history_len] = 1.1
 
     delay_steps = int(tau / dt)
@@ -29,5 +28,4 @@ def mackey_glass(tau=17, n=1000, beta=0.2, gamma=0.1, n_samples=5000, dt=1.0, se
         dx_dt = beta * x_tau / (1 + x_tau**10) - gamma * values[t]
         values[t + 1] = values[t] + dx_dt * dt
 
-    # Discard transient and return requested number of samples
     return values[history_len : history_len + n_samples]

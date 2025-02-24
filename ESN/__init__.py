@@ -1,3 +1,3 @@
-from ESN.ESN_LIN import EchoStateNetwork
-from ESN.mackey_glass import mackey_glass
+from ESN.echo_state_network import EchoStateNetwork
+from ESN.mackey_glass import MackeyGlassGenerator
 from ESN.steady_state_conductance import GinfActivator
