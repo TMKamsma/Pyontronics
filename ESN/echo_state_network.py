@@ -75,6 +75,13 @@ class EchoStateNetwork:
         self.W_out = None
 
         self._initialize_all_weights()
+        self._calculate_physical_length()
+        
+    def _calculate_physical_length(self):
+        tau = self.time_scale/self.leaking_rate
+        D = 1*10**-9
+        Length = np.sqrt(12*D*tau)
+        print(Length*10**6)
 
     def _check_parameters(self):
         """Checks whether the chosen parameters are valid."""
