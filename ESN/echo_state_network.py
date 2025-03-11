@@ -52,6 +52,13 @@ class EchoStateNetwork:
         self.W_out = None
 
         self._initialize_all_weights()
+        self._calculate_physical_length()
+
+    def _calculate_physical_length(self):
+        tau = self.time_scale/self.leaking_rate
+        D = 1*10**-9
+        Length = np.sqrt(12*D*tau)
+        print(Length*10**6)
 
     def _check_parameters(self):
         """Checks whether the chosen parameters are valid."""
@@ -206,7 +213,7 @@ class EchoStateNetwork:
             states = np.zeros((extended_length, self.reservoir_size))
             x = np.zeros(self.reservoir_size)
 
-            for t in tqdm(range(extended_length), desc="Training (time-step)", disable=False):
+            for t in tqdm(range(extended_length), desc="Training (time-step)", disable=self.progress_bar, total=len(extended_length)):
                 x = self._apply_reservoir_dynamics(x, extended_inputs[t])
                 states[t] = x
 
@@ -229,7 +236,7 @@ class EchoStateNetwork:
             n_pulses = len(inputs)
             states = np.zeros((n_pulses, self.reservoir_size))
 
-            for i, pulse in tqdm(enumerate(inputs), desc="Training (pulses)", disable=False, total=len(inputs)):
+            for i, pulse in tqdm(enumerate(inputs), desc="Training (pulses)", disable=self.progress_bar, total=len(inputs)):
                 # Convert each pulse to array shape (T, input_dim)
                 pulse_array = np.array(pulse).reshape(-1, self.input_dim)
                 T = pulse_array.shape[0]

@@ -7,3 +7,4 @@ IProgress
 ipywidgets
 scipy
 tqdm
+pandas
