@@ -143,8 +143,8 @@ class EchoStateNetwork:
         """
         Updates the reservoir state using the leaky integrator equation.
         """
-        alpha = self.leaking_rate * (self.step_size / self.time_scale)
-        return (1 - alpha) * x + alpha * self.activation(
+        alpha =  (self.step_size / self.time_scale)
+        return (1 - self.leaking_rate *alpha) * x + alpha * self.activation(
             np.dot(self.W_in, u) + np.dot(self.W_res, x)
         )
 
@@ -273,7 +273,11 @@ class EchoStateNetwork:
             all_states = np.zeros((extended_length, self.reservoir_size))
 
             for t in range(extended_length):
-                x = self._apply_reservoir_dynamics(x, extended_inputs[t])
+                if t < len(extended_inputs)/4:
+                    x = self._apply_reservoir_dynamics(x, extended_inputs[t])
+                else:
+                    previous_network_output = self.W_out @ all_states[t-1].T
+                    x = self._apply_reservoir_dynamics(x, previous_network_output)
                 all_states[t] = x
 
             # Discard the first washout states
