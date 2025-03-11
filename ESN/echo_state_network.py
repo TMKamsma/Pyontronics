@@ -213,7 +213,7 @@ class EchoStateNetwork:
             states = np.zeros((extended_length, self.reservoir_size))
             x = np.zeros(self.reservoir_size)
 
-            for t in tqdm(range(extended_length), desc="Training (time-step)", disable=self.progress_bar, total=len(extended_length)):
+            for t in tqdm(range(extended_length), desc="Training (time-step)", disable=self.progress_bar, total=extended_length):
                 x = self._apply_reservoir_dynamics(x, extended_inputs[t])
                 states[t] = x
 
