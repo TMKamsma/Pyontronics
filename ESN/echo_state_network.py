@@ -42,8 +42,6 @@ class EchoStateNetwork:
         self.guarantee_ESP = guarantee_ESP
         self.progress_bar = not progress_bar
 
-        self.training_mode = None
-
         self._check_parameters()
 
         # Weight matrices
@@ -80,9 +78,6 @@ class EchoStateNetwork:
         # Sign switching if guaranteeing ESP (step 3 of Yildiz et al. 2012 algorithm)
         if self.guarantee_ESP:
             self._random_sign_switch()
-
-        # print(np.max(np.abs(np.linalg.eigvals((self.step_size / self.time_scale)*np.absolute(self.W_res)-(1-self.leaking_rate * (self.step_size / self.time_scale))*np.identity(self.reservoir_size)))))
-        # print(np.max(np.abs(np.linalg.eigvals(self.W_res))))
 
         max_eig_M = np.max(
             np.abs(
@@ -143,101 +138,77 @@ class EchoStateNetwork:
         """
         Updates the reservoir state using the leaky integrator equation.
         """
-        alpha =  (self.step_size / self.time_scale)
-        return (1 - self.leaking_rate *alpha) * x + alpha * self.activation(
+        alpha = self.step_size / self.time_scale
+        return (1 - self.leaking_rate * alpha) * x + alpha * self.activation(
             np.dot(self.W_in, u) + np.dot(self.W_res, x)
         )
 
     def fit(self, inputs, targets):
         """
-        Train in two possible modes:
-          - Per-timestep mode: inputs is a 2D np.array of shape (n_steps, input_dim)
-                               => one target per time step
-          - Single-label mode: inputs is a list of pulses (each pulse is shape (T, input_dim))
-                               => one target per pulse
+        Per-timestep mode: inputs is a 2D np.array of shape (n_steps, input_dim)
+                            => one target per time step
         """
-        # Detect which mode to use
-        if isinstance(inputs, np.ndarray) and inputs.ndim == 2:
-            # -------------------------------------------------
-            # Mode: Per-timestep
-            # -------------------------------------------------
-            self.training_mode = "timestep"
+        if not (isinstance(inputs, np.ndarray) and inputs.ndim == 2):
+            raise ValueError("EchoStateNetwork.fit() expects 2D NumPy array for inputs.")
 
-            n_steps = inputs.shape[0]
-            extended_length = n_steps + self.washout
+        if not (isinstance(targets, np.ndarray) and targets.ndim == 2):
+            raise ValueError("EchoStateNetwork.fit() expects 2D NumPy array for targets.")
 
-            # Build extended input by prepending washout zeros
-            extended_inputs = np.zeros((extended_length, self.input_dim))
-            extended_inputs[self.washout :] = inputs
-
-            # Collect reservoir states over extended input
-            states = np.zeros((extended_length, self.reservoir_size))
-            x = np.zeros(self.reservoir_size)
-
-            for t in tqdm(
-                range(extended_length),
-                desc="Training (time-step)",
-                disable=self.progress_bar,
-                total=extended_length,
-            ):
-                x = self._apply_reservoir_dynamics(x, extended_inputs[t])
-                states[t] = x
-
-            # Discard the first `washout` states
-            states = states[self.washout :]
-
-            # Targets for each time step must align with the last states
-            # so we do not discard anything from 'targets' if it already had shape (n_steps, output_dim).
-            # Make sure 'targets' also has shape (n_steps, output_dim).
-            if len(targets) != n_steps:
-                raise ValueError(
-                    "Mismatch: inputs has n_steps={} but targets has {} rows.".format(
-                        n_steps, len(targets)
-                    )
-                )
-
-        elif isinstance(inputs, list):
-            # -------------------------------------------------
-            # Mode: Single-label per pulse (variable lengths)
-            # -------------------------------------------------
-            self.training_mode = "pulses"
-
-            n_pulses = len(inputs)
-            states = np.zeros((n_pulses, self.reservoir_size))
-
-            for i, pulse in tqdm(
-                enumerate(inputs),
-                desc="Training (pulses)",
-                disable=self.progress_bar,
-                total=len(inputs),
-            ):
-                # Convert each pulse to array shape (T, input_dim)
-                pulse_array = np.array(pulse).reshape(-1, self.input_dim)
-                T = pulse_array.shape[0]
-
-                # Build extended pulse with zeros at the front
-                extended_pulse = np.zeros((T + self.washout, self.input_dim))
-                extended_pulse[self.washout :] = pulse_array
-
-                # Run reservoir
-                x = np.zeros(self.reservoir_size)
-                for t in range(T + self.washout):
-                    x = self._apply_reservoir_dynamics(x, extended_pulse[t])
-
-                # Store final state in 'states'
-                states[i] = x
-
-            # 'targets' should have shape (n_pulses, output_dim)
-            if len(targets) != n_pulses:
-                raise ValueError(
-                    "Mismatch: got n_pulses={} but targets has {} rows.".format(
-                        n_pulses, len(targets)
-                    )
-                )
-
-        else:
+        if inputs.shape[0] != targets.shape[0]:
             raise ValueError(
-                "Inputs must be a 2D NumPy array (per-timestep) or list of pulses (single-label)."
+                "Mismatch: inputs has n_steps={} but targets has n_steps={}.".format(
+                    inputs.shape[0], targets.shape[0]
+                )
+            )
+
+        if targets.shape[1] != self.output_dim:
+            raise ValueError(
+                "Mismatch: targets output_dim={} but ESN expects output_dim={}.".format(
+                    targets.shape[1], self.output_dim
+                )
+            )
+
+        if inputs.shape[1] != self.input_dim:
+            raise ValueError(
+                "Mismatch: inputs input_dim={} but ESN expects input_dim={}.".format(
+                    inputs.shape[1], self.input_dim
+                )
+            )
+
+        if inputs.shape[0] == 0 or targets.shape[0] == 0:
+            raise ValueError("Input and target arrays must not be empty.")
+
+        n_steps = inputs.shape[0]
+        extended_length = n_steps + self.washout
+
+        # Build extended input by prepending washout zeros
+        extended_inputs = np.zeros((extended_length, self.input_dim))
+        extended_inputs[self.washout :] = inputs
+
+        # Collect reservoir states over extended input
+        states = np.zeros((extended_length, self.reservoir_size))
+        x = np.zeros(self.reservoir_size)
+
+        for t in tqdm(
+            range(extended_length),
+            desc="Training (time-step)",
+            disable=self.progress_bar,
+            total=extended_length,
+        ):
+            x = self._apply_reservoir_dynamics(x, extended_inputs[t])
+            states[t] = x
+
+        # Discard the first `washout` states
+        states = states[self.washout :]
+
+        # Targets for each time step must align with the last states
+        # so we do not discard anything from 'targets' if it already had shape (n_steps, output_dim).
+        # Make sure 'targets' also has shape (n_steps, output_dim).
+        if len(targets) != n_steps:
+            raise ValueError(
+                "Mismatch: inputs has n_steps={} but targets has {} rows.".format(
+                    n_steps, len(targets)
+                )
             )
 
         self._solve_ridge(states, targets)
@@ -250,77 +221,149 @@ class EchoStateNetwork:
 
     def predict(self, inputs, initial_state=None):
         """
-        Prediction in the same two modes:
-          - Per-timestep: 2D NumPy (n_steps, input_dim) => outputs shape (n_steps, output_dim)
-          - Single-label: list of pulses => outputs shape (n_pulses, output_dim)
+        Per-timestep: 2D NumPy (n_steps, input_dim) => outputs shape (n_steps, output_dim)
         """
-        if self.training_mode == "timestep":
-            if not (isinstance(inputs, np.ndarray) and inputs.ndim == 2):
-                raise ValueError(
-                    "ESN was trained in per-timestep mode, but got a different type of inputs."
-                )
+        if not (isinstance(inputs, np.ndarray) and inputs.ndim == 2):
+            raise ValueError(
+                "EchoStateNetwork.predict() expects 2D NumPy array, but got something else."
+            )
 
-            n_steps = inputs.shape[0]
-            extended_length = n_steps + self.washout
-            extended_inputs = np.zeros((extended_length, self.input_dim))
-            extended_inputs[self.washout :] = inputs
+        n_steps = inputs.shape[0]
+        extended_length = n_steps + self.washout
+        extended_inputs = np.zeros((extended_length, self.input_dim))
+        extended_inputs[self.washout :] = inputs
+
+        x = (
+            np.zeros(self.reservoir_size)
+            if initial_state is None
+            else initial_state.copy()
+        )
+        all_states = np.zeros((extended_length, self.reservoir_size))
+
+        for t in range(extended_length):
+            if t < len(extended_inputs) / 4:
+                x = self._apply_reservoir_dynamics(x, extended_inputs[t])
+            else:
+                previous_network_output = self.W_out @ all_states[t - 1].T
+                x = self._apply_reservoir_dynamics(x, previous_network_output)
+            all_states[t] = x
+
+        # Discard the first washout states
+        trimmed_states = all_states[self.washout :]
+
+        # Compute output at every time step
+        outputs = (self.W_out @ trimmed_states.T).T
+        return outputs
+    
+    @property
+    def physical_length(self) -> float:
+        """Computes the physical diffusion length in micrometers."""
+        tau = self.time_scale / self.leaking_rate
+        D = 1e-9  # Diffusion constant in m²/s
+        return np.sqrt(12 * D * tau) * 1e6  # Convert to micrometers
+
+class PulseEchoStateNetwork(EchoStateNetwork):
+    """
+    Echo State Network for single-label classification/regression tasks.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def fit(self, inputs, targets):
+        """
+        Single-label mode: inputs is a list of pulses (each pulse is shape (T, input_dim))
+                                => one target per pulse
+        """
+
+        if not isinstance(inputs, list) or not all(isinstance(p, np.ndarray) and p.ndim == 2 for p in inputs):
+            raise ValueError("PulseEchoStateNetwork.fit() expects a list of 2D NumPy arrays for inputs.")
+
+        if not (isinstance(targets, np.ndarray) and targets.ndim == 2):
+            raise ValueError("PulseEchoStateNetwork.fit() expects a 2D NumPy array for targets.")
+
+        if len(inputs) != targets.shape[0]:
+            raise ValueError(
+                "Mismatch: number of pulses={} but targets has {} rows.".format(
+                    len(inputs), targets.shape[0]
+                )
+            )
+
+        if any(p.shape[1] != self.input_dim for p in inputs):
+            raise ValueError("All pulses must have input_dim={}.".format(self.input_dim))
+
+        if targets.shape[1] != self.output_dim:
+            raise ValueError(
+                "Mismatch: targets output_dim={} but ESN expects output_dim={}.".format(
+                    targets.shape[1], self.output_dim
+                )
+            )
+
+        if len(inputs) == 0 or targets.shape[0] == 0:
+            raise ValueError("Input pulses and target arrays must not be empty.")
+
+        n_pulses = len(inputs)
+        states = np.zeros((n_pulses, self.reservoir_size))
+
+        for i, pulse in tqdm(
+            enumerate(inputs),
+            desc="Training (pulses)",
+            disable=self.progress_bar,
+            total=len(inputs),
+        ):
+            # Convert each pulse to array shape (T, input_dim)
+            pulse_array = np.array(pulse).reshape(-1, self.input_dim)
+            T = pulse_array.shape[0]
+
+            # Build extended pulse with zeros at the front
+            extended_pulse = np.zeros((T + self.washout, self.input_dim))
+            extended_pulse[self.washout :] = pulse_array
+
+            # Run reservoir
+            x = np.zeros(self.reservoir_size)
+            for t in range(T + self.washout):
+                x = self._apply_reservoir_dynamics(x, extended_pulse[t])
+
+            # Store final state in 'states'
+            states[i] = x
+
+        # 'targets' should have shape (n_pulses, output_dim)
+        if len(targets) != n_pulses:
+            raise ValueError(
+                "Mismatch: got n_pulses={} but targets has {} rows.".format(
+                    n_pulses, len(targets)
+                )
+            )
+
+        self._solve_ridge(states, targets)
+
+    def predict(self, inputs, initial_state=None) -> np.ndarray:
+        """
+        Single-label: list of pulses => outputs shape (n_pulses, output_dim)
+        """
+        if not isinstance(inputs, list):
+            raise ValueError(
+                "PulseEchoStateNetwork.predict() expects a list of pulses, but got something else."
+            )
+
+        n_pulses = len(inputs)
+        outputs = np.zeros((n_pulses, self.output_dim))
+
+        for i, pulse in enumerate(inputs):
+            pulse_array = np.array(pulse).reshape(-1, self.input_dim)
+            T = pulse_array.shape[0]
+
+            extended_pulse = np.zeros((T + self.washout, self.input_dim))
+            extended_pulse[self.washout :] = pulse_array
 
             x = (
                 np.zeros(self.reservoir_size)
                 if initial_state is None
                 else initial_state.copy()
             )
-            all_states = np.zeros((extended_length, self.reservoir_size))
+            for t in range(T + self.washout):
+                x = self._apply_reservoir_dynamics(x, extended_pulse[t])
 
-            for t in range(extended_length):
-                if t < len(extended_inputs)/4:
-                    x = self._apply_reservoir_dynamics(x, extended_inputs[t])
-                else:
-                    previous_network_output = self.W_out @ all_states[t-1].T
-                    x = self._apply_reservoir_dynamics(x, previous_network_output)
-                all_states[t] = x
+            outputs[i] = self.W_out @ x
 
-            # Discard the first washout states
-            trimmed_states = all_states[self.washout :]
-
-            # Compute output at every time step
-            outputs = (self.W_out @ trimmed_states.T).T  # shape: (n_steps, output_dim)
-            return outputs
-
-        elif self.training_mode == "pulses":
-            if not isinstance(inputs, list):
-                raise ValueError(
-                    "ESN was trained in single-label-pulse mode, but got non-list inputs."
-                )
-
-            n_pulses = len(inputs)
-            outputs = np.zeros((n_pulses, self.output_dim))
-
-            for i, pulse in enumerate(inputs):
-                pulse_array = np.array(pulse).reshape(-1, self.input_dim)
-                T = pulse_array.shape[0]
-
-                extended_pulse = np.zeros((T + self.washout, self.input_dim))
-                extended_pulse[self.washout :] = pulse_array
-
-                x = (
-                    np.zeros(self.reservoir_size)
-                    if initial_state is None
-                    else initial_state.copy()
-                )
-                for t in range(T + self.washout):
-                    x = self._apply_reservoir_dynamics(x, extended_pulse[t])
-
-                # Final reservoir state => one prediction
-                outputs[i] = self.W_out @ x
-
-            return outputs
-
-        else:
-            raise ValueError("Network wasn't trained yet or mode is unknown.")
-
-    def get_physical_length(self):
-        tau = self.time_scale / self.leaking_rate
-        D = 1 * 10**-9
-        Length = np.sqrt(12 * D * tau)
-        return Length * 10**6
+        return outputs
