@@ -219,7 +219,7 @@ class EchoStateNetwork:
         B = states.T @ targets
         self.W_out = np.linalg.solve(A, B).T
 
-    def predict(self, inputs, initial_state=None):
+    def predict(self, inputs, teacher_ratio = 1.0, initial_state=None):
         """
         Per-timestep: 2D NumPy (n_steps, input_dim) => outputs shape (n_steps, output_dim)
         """
@@ -233,6 +233,7 @@ class EchoStateNetwork:
         extended_inputs = np.zeros((extended_length, self.input_dim))
         extended_inputs[self.washout :] = inputs
 
+        teacher_steps = int(teacher_ratio * extended_length)
         x = (
             np.zeros(self.reservoir_size)
             if initial_state is None
@@ -241,7 +242,7 @@ class EchoStateNetwork:
         all_states = np.zeros((extended_length, self.reservoir_size))
 
         for t in range(extended_length):
-            if t < len(extended_inputs) / 4:
+            if t < teacher_steps:
                 x = self._apply_reservoir_dynamics(x, extended_inputs[t])
             else:
                 previous_network_output = self.W_out @ all_states[t - 1].T

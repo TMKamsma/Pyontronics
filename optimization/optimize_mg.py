@@ -17,10 +17,7 @@ activation_functions = {
 
 
 def objective(trial):
-    tau = np.random.randint(10, 30)
-    trial.set_user_attr("tau", tau)
-
-    mg_series = MackeyGlassGenerator(tau=tau, n=10000, n_samples=5000)
+    mg_series = MackeyGlassGenerator(tau=17, n=10000, n_samples=5000)
     mg_series = (
         2 * (mg_series - mg_series.min()) / (mg_series.max() - mg_series.min()) - 1
     )
@@ -43,6 +40,10 @@ def objective(trial):
     sparsity = trial.suggest_float("sparsity", 0.01, 0.99)
     input_scaling = trial.suggest_float("input_scaling", 0.1, 10.0, log=True)
     regularization = trial.suggest_float("regularization", 1e-6, 1e-2, log=True)
+
+    # set teacher ratio to 0.4 and pass to optuna as user attribute
+    teacher_ratio = 0.4
+    trial.set_user_attr("teacher_ratio", teacher_ratio)
 
     if leaking_rate * (step_size / time_scale) > 1:
         raise optuna.exceptions.TrialPruned("Leaking rate * step_size/time_scale > 1")
@@ -67,8 +68,8 @@ def objective(trial):
     )
     esn.fit(train_x, train_y)
 
-    predictions = esn.predict(test_x)
-    return np.mean((predictions - test_y) ** 2)
+    predictions = esn.predict(test_x, teacher_ratio=teacher_ratio)
+    return min(1, np.mean((predictions - test_y) ** 2))
 
 
 try:
