@@ -53,6 +53,17 @@ Below are the main parameters you can set when creating an EchoStateNetwork inst
 <img src="output/mg_phase_space_plot.png" width=50% height=50%>
 <img src="output/sine_prediction_plot.png" width=50% height=50%>
 
+# Optimization
+
+The parameters of the ESN can be optimized for a dataset using optuna. Example
+files for optimization are included in the repository in the optimization
+folder. Use `optuna-dashboard sqlite:///optuna_esn.db` to visualize the results.
+
+This code requires the optuna library. Install it using `pip install optuna`.
+The dashboard requires the optuna-dashboard library. Install it using 
+`pip install optuna-dashboard`.
+
+
 # License
 This extension is released under the MIT License.
 

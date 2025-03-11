@@ -160,5 +160,6 @@ cython_debug/
 #.idea/
 
 output/*.pdf
-optuna_esn_MG.db
+optuna_esn.db
 data/
+.vscode/settings.json
