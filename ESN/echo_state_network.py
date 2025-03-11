@@ -227,6 +227,11 @@ class EchoStateNetwork:
             raise ValueError(
                 "EchoStateNetwork.predict() expects 2D NumPy array, but got something else."
             )
+        
+        if self.input_dim > 1 and teacher_ratio != 1.0:
+            raise ValueError(
+                "Teacher forcing is only supported for single-input ESNs."
+            )
 
         n_steps = inputs.shape[0]
         extended_length = n_steps + self.washout
@@ -268,20 +273,11 @@ class PulseEchoStateNetwork(EchoStateNetwork):
     Echo State Network for single-label classification/regression tasks.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def fit(self, inputs, targets):
         """
         Single-label mode: inputs is a list of pulses (each pulse is shape (T, input_dim))
                                 => one target per pulse
         """
-
-        if not isinstance(inputs, list) or not all(isinstance(p, np.ndarray) and p.ndim == 2 for p in inputs):
-            raise ValueError("PulseEchoStateNetwork.fit() expects a list of 2D NumPy arrays for inputs.")
-
-        if not (isinstance(targets, np.ndarray) and targets.ndim == 2):
-            raise ValueError("PulseEchoStateNetwork.fit() expects a 2D NumPy array for targets.")
 
         if len(inputs) != targets.shape[0]:
             raise ValueError(
@@ -289,9 +285,6 @@ class PulseEchoStateNetwork(EchoStateNetwork):
                     len(inputs), targets.shape[0]
                 )
             )
-
-        if any(p.shape[1] != self.input_dim for p in inputs):
-            raise ValueError("All pulses must have input_dim={}.".format(self.input_dim))
 
         if targets.shape[1] != self.output_dim:
             raise ValueError(

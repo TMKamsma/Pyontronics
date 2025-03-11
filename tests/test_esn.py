@@ -36,6 +36,24 @@ def default_pulse_esn(default_esn):
         progress_bar=not default_esn.progress_bar,
     )
 
+@pytest.fixture
+def single_input_esn():
+    """Returns an ESN with a single input dimension to allow teacher forcing tests."""
+    return EchoStateNetwork(
+        input_dim=1,
+        reservoir_size=10,
+        output_dim=1,
+        leaking_rate=0.8,
+        step_size=0.3,
+        time_scale=1.0,
+        spectral_radius=0.8,
+        sparsity=0.2,
+        washout=3,
+        weight_seed=42,
+        guarantee_ESP=False,
+        progress_bar=False,
+    )
+
 # ===== Tests for EchoStateNetwork (Timestep Mode) =====
 
 def test_init_basic(default_esn):
@@ -155,3 +173,37 @@ def test_empty_input_pulse(default_pulse_esn):
     targets = np.array([]).reshape(0, esn.output_dim)
     with pytest.raises(ValueError):
         esn.fit(pulses, targets)
+
+# ===== Teacher Forcing Tests =====
+def test_teacher_ratio_all_teacher(single_input_esn):
+    """
+    Test that when teacher_ratio=1.0 (pure teacher forcing), the predict method 
+    runs without error and returns an output of the correct shape.
+    """
+    esn = single_input_esn
+    n_steps = 20
+    inputs = np.random.randn(n_steps, esn.input_dim)
+    targets = np.random.randn(n_steps, esn.output_dim)
+    esn.fit(inputs, targets)
+    
+    test_inputs = np.random.randn(10, esn.input_dim)
+    preds = esn.predict(test_inputs, teacher_ratio=1.0)
+    assert preds.shape == (10, esn.output_dim)
+
+def test_teacher_ratio_free_running(single_input_esn):
+    """
+    Test that when teacher_ratio=0.0 (free-running mode) the network produces 
+    different predictions than when using full teacher forcing.
+    """
+    esn = single_input_esn
+    n_steps = 20
+    inputs = np.random.randn(n_steps, esn.input_dim)
+    targets = np.random.randn(n_steps, esn.output_dim)
+    esn.fit(inputs, targets)
+    
+    test_inputs = np.random.randn(10, esn.input_dim)
+    preds_teacher = esn.predict(test_inputs, teacher_ratio=1.0)
+    preds_free = esn.predict(test_inputs, teacher_ratio=0.0)
+    
+    # Assert that the two predictions differ.
+    assert not np.allclose(preds_teacher, preds_free)
