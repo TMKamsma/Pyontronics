@@ -9,7 +9,7 @@ import os
 
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, root_path)
-from ESN import EchoStateNetwork, GinfActivator  # noqa: E402
+from ESN import PulseEchoStateNetwork, GinfActivator  # noqa: E402
 
 ginf_activator = GinfActivator(V_min=-2, V_max=2, resolution=200, offset=True)
 
@@ -42,13 +42,14 @@ df_merged = shuffle(df_merged, random_state=42)
 
 train_samples = []
 test_samples = []
+num_samples = 100
 
 unique_filenames = df_merged["filename"].unique()
 for filename in unique_filenames:
     class_subset = df_merged[df_merged["filename"] == filename]
 
-    train_samples.append(class_subset.iloc[:100])
-    test_samples.append(class_subset.iloc[100:110])
+    train_samples.append(class_subset.iloc[:num_samples])
+    test_samples.append(class_subset.iloc[num_samples:int(num_samples*1.2)])
 
 train_set = pd.concat(train_samples).sample(frac=1, random_state=42)
 test_set = pd.concat(test_samples).sample(frac=1, random_state=42)
@@ -76,7 +77,7 @@ def objective(trial):
     if spectral_radius >= leaking_rate:
         raise optuna.exceptions.TrialPruned("Spectral_radius < Leaking_rate")
 
-    esn = EchoStateNetwork(
+    esn = PulseEchoStateNetwork(
         input_dim=1,
         reservoir_size=reservoir_size,
         output_dim=1,
