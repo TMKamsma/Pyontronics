@@ -16,6 +16,7 @@ class EchoStateNetwork:
         sparsity=0.5,
         input_scaling=1.0,
         regularization=1e-4,
+        washout = 100,
         weight_seed=42,
         activation=np.tanh,
         guarantee_ESP=True,
@@ -23,33 +24,6 @@ class EchoStateNetwork:
     ):
         """
         Echo State Network with optional guarantee of the Echo State Property (ESP).
-
-        Parameters
-        ----------
-        input_dim : int
-            Dimension of input data
-        reservoir_size : int
-            Number of neurons in the reservoir
-        output_dim : int
-            Dimension of output data
-        leaking_rate : float
-            Self-coupling constant
-        step_size : float
-            Time step size
-        time_scale : float
-            Scale of the time evolution
-        spectral_radius : float
-            Desired spectral radius of the reservoir weight matrix
-        sparsity : float
-            Proportion of recurrent weights set to zero
-        input_scaling : float
-            Scaling factor for input weights
-        regularization : float
-            Regularization coefficient for ridge regression
-        activation : callable
-            Activation function for reservoir neurons
-        guarantee_ESP : bool
-            If True, ensure spectral radius < 1 and apply sign switching
         """
         self.input_dim = input_dim
         self.reservoir_size = reservoir_size
@@ -62,10 +36,13 @@ class EchoStateNetwork:
         self.sparsity = sparsity
         self.input_scaling = input_scaling
         self.regularization = regularization
+        self.washout = washout
         self.weight_seed = weight_seed
         self.activation = activation
         self.guarantee_ESP = guarantee_ESP
         self.progress_bar = not progress_bar
+
+        self.training_mode = None
 
         self._check_parameters()
 
@@ -76,7 +53,7 @@ class EchoStateNetwork:
 
         self._initialize_all_weights()
         self._calculate_physical_length()
-        
+
     def _calculate_physical_length(self):
         tau = self.time_scale/self.leaking_rate
         D = 1*10**-9
@@ -109,8 +86,8 @@ class EchoStateNetwork:
         if self.guarantee_ESP:
             self._random_sign_switch()
         
-        print(np.max(np.abs(np.linalg.eigvals((self.step_size / self.time_scale)*np.absolute(self.W_res)-(1-self.leaking_rate * (self.step_size / self.time_scale))*np.identity(self.reservoir_size)))))
-        print(np.max(np.abs(np.linalg.eigvals(self.W_res))))
+        # print(np.max(np.abs(np.linalg.eigvals((self.step_size / self.time_scale)*np.absolute(self.W_res)-(1-self.leaking_rate * (self.step_size / self.time_scale))*np.identity(self.reservoir_size)))))
+        # print(np.max(np.abs(np.linalg.eigvals(self.W_res))))
         
         max_eig_M = np.max(np.abs(np.linalg.eigvals((self.step_size / self.time_scale)*np.absolute(self.W_res)-(1-self.leaking_rate * (self.step_size / self.time_scale))*np.identity(self.reservoir_size))))
         
@@ -168,58 +145,190 @@ class EchoStateNetwork:
             np.dot(self.W_in, u) + np.dot(self.W_res, x)
         )
 
-    def fit(self, inputs, targets, washout=100):
+    # def fit(self, inputs, targets, washout=100):
+    #     n_samples = inputs.shape[0]
+    #     states = np.zeros((n_samples, self.reservoir_size))
+    #     x = np.zeros(self.reservoir_size)
+
+    #     # Collect reservoir states
+    #     for t in tqdm(range(n_samples), desc="Collecting reservoir states", disable=self.progress_bar):
+    #         x = self._apply_reservoir_dynamics(x, inputs[t])
+    #         states[t] = x
+
+    #     # Discard washout
+    #     states = states[washout:]
+    #     targets = targets[washout:]
+
+    #     # Solve ridge regression: (XᵀX + λI) W_out = XᵀY
+    #     X = states
+    #     Y = targets
+    #     A = X.T @ X + self.regularization * np.eye(self.reservoir_size)
+    #     B = X.T @ Y
+    #     self.W_out = np.linalg.solve(A, B).T
+
+
+    # def predict(self, inputs, initial_state=None):
+    #     """
+    #     Generates predictions for given inputs, starting from an optional initial state.
+    #     """
+    #     n_samples = inputs.shape[0]
+    #     x = (
+    #         np.zeros(self.reservoir_size)
+    #         if initial_state is None
+    #         else initial_state.copy()
+    #     )
+
+    #     outputs = np.zeros((n_samples, self.output_dim))
+
+    #     for t in range(n_samples):
+    #         x = self._apply_reservoir_dynamics(x, inputs[t])
+    #         outputs[t] = self.W_out @ x
+
+    #     return outputs
+
+
+    def fit(self, inputs, targets):
         """
-        Trains the ESN by collecting reservoir states and solving
-        a ridge regression for the output weights.
-
-        Parameters
-        ----------
-        inputs : np.ndarray
-            Shape (n_samples, input_dim) containing input data
-        targets : np.ndarray
-            Shape (n_samples, output_dim) containing desired outputs
-        washout : int
-            Number of initial samples to discard before training
+        Train in two possible modes:
+          - Per-timestep mode: inputs is a 2D np.array of shape (n_steps, input_dim)
+                               => one target per time step
+          - Single-label mode: inputs is a list of pulses (each pulse is shape (T, input_dim))
+                               => one target per pulse
         """
-        n_samples = inputs.shape[0]
-        states = np.zeros((n_samples, self.reservoir_size))
-        x = np.zeros(self.reservoir_size)
+        # Detect which mode to use
+        if isinstance(inputs, np.ndarray) and inputs.ndim == 2:
+            # -------------------------------------------------
+            # Mode: Per-timestep
+            # -------------------------------------------------
+            self.training_mode = "timestep"
 
-        # Collect reservoir states
-        for t in tqdm(range(n_samples), desc="Collecting reservoir states", disable=self.progress_bar):
-            x = self._apply_reservoir_dynamics(x, inputs[t])
-            states[t] = x
+            n_steps = inputs.shape[0]
+            extended_length = n_steps + self.washout
 
-        # Discard washout
-        states = states[washout:]
-        targets = targets[washout:]
+            # Build extended input by prepending washout zeros
+            extended_inputs = np.zeros((extended_length, self.input_dim))
+            extended_inputs[self.washout:] = inputs
 
-        # Solve ridge regression: (XᵀX + λI) W_out = XᵀY
-        X = states
-        Y = targets
-        A = X.T @ X + self.regularization * np.eye(self.reservoir_size)
-        B = X.T @ Y
+            # Collect reservoir states over extended input
+            states = np.zeros((extended_length, self.reservoir_size))
+            x = np.zeros(self.reservoir_size)
+
+            for t in tqdm(range(extended_length), desc="Training (time-step)", disable=self.progress_bar, total=len(extended_length)):
+                x = self._apply_reservoir_dynamics(x, extended_inputs[t])
+                states[t] = x
+
+            # Discard the first `washout` states
+            states = states[self.washout:]
+
+            # Targets for each time step must align with the last states
+            # so we do not discard anything from 'targets' if it already had shape (n_steps, output_dim).
+            # Make sure 'targets' also has shape (n_steps, output_dim).
+            if len(targets) != n_steps:
+                raise ValueError("Mismatch: inputs has n_steps={} but targets has {} rows."
+                                 .format(n_steps, len(targets)))
+
+        elif isinstance(inputs, list):
+            # -------------------------------------------------
+            # Mode: Single-label per pulse (variable lengths)
+            # -------------------------------------------------
+            self.training_mode = "pulses"
+
+            n_pulses = len(inputs)
+            states = np.zeros((n_pulses, self.reservoir_size))
+
+            for i, pulse in tqdm(enumerate(inputs), desc="Training (pulses)", disable=self.progress_bar, total=len(inputs)):
+                # Convert each pulse to array shape (T, input_dim)
+                pulse_array = np.array(pulse).reshape(-1, self.input_dim)
+                T = pulse_array.shape[0]
+
+                # Build extended pulse with zeros at the front
+                extended_pulse = np.zeros((T + self.washout, self.input_dim))
+                extended_pulse[self.washout:] = pulse_array
+
+                # Run reservoir
+                x = np.zeros(self.reservoir_size)
+                for t in range(T + self.washout):
+                    x = self._apply_reservoir_dynamics(x, extended_pulse[t])
+
+                # Store final state in 'states'
+                states[i] = x
+
+            # 'targets' should have shape (n_pulses, output_dim)
+            if len(targets) != n_pulses:
+                raise ValueError("Mismatch: got n_pulses={} but targets has {} rows."
+                                 .format(n_pulses, len(targets)))
+
+        else:
+            raise ValueError("Inputs must be a 2D NumPy array (per-timestep) or list of pulses (single-label).")
+
+        # Solve ridge regression: (states^T states + λI) W_out = states^T targets
+        A = states.T @ states + self.regularization * np.eye(self.reservoir_size)
+        B = states.T @ targets
         self.W_out = np.linalg.solve(A, B).T
 
     def predict(self, inputs, initial_state=None):
         """
-        Generates predictions for given inputs, starting from an optional initial state.
+        Prediction in the same two modes:
+          - Per-timestep: 2D NumPy (n_steps, input_dim) => outputs shape (n_steps, output_dim)
+          - Single-label: list of pulses => outputs shape (n_pulses, output_dim)
         """
-        n_samples = inputs.shape[0]
-        x = (
-            np.zeros(self.reservoir_size)
-            if initial_state is None
-            else initial_state.copy()
-        )
+        if self.training_mode == "timestep":
+            if not (isinstance(inputs, np.ndarray) and inputs.ndim == 2):
+                raise ValueError("ESN was trained in per-timestep mode, but got a different type of inputs.")
 
-        outputs = np.zeros((n_samples, self.output_dim))
+            n_steps = inputs.shape[0]
+            extended_length = n_steps + self.washout
+            extended_inputs = np.zeros((extended_length, self.input_dim))
+            extended_inputs[self.washout:] = inputs
 
-        for t in range(n_samples):
-            x = self._apply_reservoir_dynamics(x, inputs[t])
-            outputs[t] = self.W_out @ x
+            x = (
+                np.zeros(self.reservoir_size)
+                if initial_state is None
+                else initial_state.copy()
+            )
+            all_states = np.zeros((extended_length, self.reservoir_size))
 
-        return outputs
+            for t in range(extended_length):
+                x = self._apply_reservoir_dynamics(x, extended_inputs[t])
+                all_states[t] = x
+
+            # Discard the first washout states
+            trimmed_states = all_states[self.washout:]
+
+            # Compute output at every time step
+            outputs = (self.W_out @ trimmed_states.T).T  # shape: (n_steps, output_dim)
+            return outputs
+
+        elif self.training_mode == "pulses":
+            if not isinstance(inputs, list):
+                raise ValueError("ESN was trained in single-label-pulse mode, but got non-list inputs.")
+
+            n_pulses = len(inputs)
+            outputs = np.zeros((n_pulses, self.output_dim))
+
+            for i, pulse in enumerate(inputs):
+                pulse_array = np.array(pulse).reshape(-1, self.input_dim)
+                T = pulse_array.shape[0]
+
+                extended_pulse = np.zeros((T + self.washout, self.input_dim))
+                extended_pulse[self.washout:] = pulse_array
+
+                x = (
+                    np.zeros(self.reservoir_size)
+                    if initial_state is None
+                    else initial_state.copy()
+                )
+                for t in range(T + self.washout):
+                    x = self._apply_reservoir_dynamics(x, extended_pulse[t])
+
+                # Final reservoir state => one prediction
+                outputs[i] = self.W_out @ x
+
+            return outputs
+
+        else:
+            raise ValueError("Network wasn't trained yet or mode is unknown.")
+
 
     def visualize_reservoir(self, draw_labels=False):
         """
