@@ -270,6 +270,55 @@ class BandPassNetwork:
         outputs = (self.W_out @ trimmed_states.T).T
         return outputs
     
+    def predict_more_steps(self, inputs, teacher_ratio = 1.0, predict_steps=2, initial_state=None):
+        """
+        Per-timestep: 2D NumPy (n_steps, input_dim) => outputs shape (n_steps, output_dim)
+        """
+        if not (isinstance(inputs, np.ndarray) and inputs.ndim == 2):
+            raise ValueError(
+                "EchoStateNetwork.predict() expects 2D NumPy array, but got something else."
+            )
+        
+        if self.input_dim > 1 and teacher_ratio != 1.0:
+            raise ValueError(
+                "Teacher forcing is only supported for single-input ESNs."
+            )
+
+        n_steps = inputs.shape[0]
+        extended_length = n_steps + self.washout
+        extended_inputs = np.zeros((extended_length, self.input_dim))
+        extended_inputs[self.washout :] = inputs
+
+        teacher_steps = int(teacher_ratio * extended_length)
+        x = (
+            np.zeros(self.reservoir_size)
+            if initial_state is None
+            else initial_state.copy()
+        )
+        all_states = np.zeros((extended_length, self.reservoir_size))
+        all_states_predict = np.zeros((extended_length, self.reservoir_size))
+        
+        for t in range(extended_length):
+            if t < teacher_steps:
+                x_predict = x
+                for i in range(predict_steps):
+                    predict_out = self.W_out @ x_predict.T
+                    x_predict = self._apply_reservoir_dynamics(x_predict, predict_out)
+                    
+                x = self._apply_reservoir_dynamics(x, extended_inputs[t])
+            else:
+                previous_network_output = self.W_out @ all_states[t - 1].T
+                x = self._apply_reservoir_dynamics(x, previous_network_output)
+            all_states[t] = x
+            all_states_predict[t] = x_predict
+
+        # Discard the first washout states
+        trimmed_states = all_states_predict[self.washout :]
+
+        # Compute output at every time step
+        outputs = (self.W_out @ trimmed_states.T).T
+        return outputs
+    
     @property
     def physical_length(self) -> float:
         """Computes the physical diffusion length in micrometers."""

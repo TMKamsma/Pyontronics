@@ -1,5 +1,5 @@
 from .echo_state_network import EchoStateNetwork, PulseEchoStateNetwork
-from .band_pass_network import BandPassNetwork
+from .band_pass_network import BandPassNetwork, PulseBandPassNetwork
 from .mackey_glass import MackeyGlassGenerator
 from .steady_state_conductance import GinfActivator
 from .visualization import visualize_reservoir
