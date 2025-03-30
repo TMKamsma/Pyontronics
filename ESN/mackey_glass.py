@@ -15,7 +15,7 @@ def MackeyGlassGenerator(tau=17, n=1000, beta=0.2, gamma=0.1, n_samples=5000, dt
         np.random.seed(seed)
 
     history_len = tau * 1
-    values = np.random.rand(history_len + n)
+    values = 2*np.random.rand(history_len + n)-1
 
     #values[:history_len] = 1.1
 
