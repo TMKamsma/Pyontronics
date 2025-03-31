@@ -1,11 +1,11 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "TMKamsma/Pyontronics"
+title: "Code Repository for: Pyontronics"
 doi: 10.5281/zenodo.15113279
 date-released: 2025-03-31
 url: "https://github.com/TMKamsma/Pyontronics"
 authors:
   - family-names: "Teijema"
-    given-names: "Jelle"
+    given-names: "Jelle J"
   - family-names: "Kamsma"
     given-names: "Tim M"
