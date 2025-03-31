@@ -1,9 +1,5 @@
 # Optimization and Applications of Echo State Networks with Leaky-Integrator Neurons
-badges met DOIs
-
-## Authors
-Tim Kamsma
-Jelle Jasper Teijema
+DOI
 
 ## Abstract
 This repository provides an Echo State Network (ESN) framework designed for both continuous data streams and sets of shorter pulses, each with a single label. The ESN uses leaky-integrator neurons, which offer a controlled decay of past inputs and states. This design helps the network capture temporal dependencies across diverse applications such as signal classification, time-series prediction, and dynamic modeling.
@@ -62,6 +58,11 @@ folder. Use `optuna-dashboard sqlite:///optuna_esn.db` to visualize the results.
 This code requires the optuna library. Install it using `pip install optuna`.
 The dashboard requires the optuna-dashboard library. Install it using 
 `pip install optuna-dashboard`.
+
+## Authors
+Tim Kamsma
+
+Jelle Jasper Teijema
 
 
 # License
