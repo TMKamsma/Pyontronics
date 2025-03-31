@@ -6,3 +6,4 @@ ipywidgets
 scipy
 tqdm
 pandas
+networkx
