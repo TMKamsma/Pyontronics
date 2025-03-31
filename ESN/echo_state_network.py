@@ -279,23 +279,6 @@ class PulseEchoStateNetwork(EchoStateNetwork):
                                 => one target per pulse
         """
 
-        if len(inputs) != targets.shape[0]:
-            raise ValueError(
-                "Mismatch: number of pulses={} but targets has {} rows.".format(
-                    len(inputs), targets.shape[0]
-                )
-            )
-
-        if targets.shape[1] != self.output_dim:
-            raise ValueError(
-                "Mismatch: targets output_dim={} but ESN expects output_dim={}.".format(
-                    targets.shape[1], self.output_dim
-                )
-            )
-
-        if len(inputs) == 0 or targets.shape[0] == 0:
-            raise ValueError("Input pulses and target arrays must not be empty.")
-
         n_pulses = len(inputs)
         states = np.zeros((n_pulses, self.reservoir_size))
 
@@ -361,3 +344,59 @@ class PulseEchoStateNetwork(EchoStateNetwork):
             outputs[i] = self.W_out @ x
 
         return outputs
+
+class BandPassNetwork(EchoStateNetwork):
+    """
+    Echo State Network variant whose reservoir units each have their own timescale.
+
+    Inherits all parameters and behaviour from EchoStateNetwork, but treats the
+    parent's `time_scale` as the average timescale for every unit. 
+
+    New argument:
+      • time_scale_std (float): standard deviation of per-unit timescales.
+
+    Internally, each reservoir unit's timescale is sampled from a normal distribution
+    N(time_scale, time_scale_std) and clipped to a minimum of time_scale/5.
+    """
+
+    def __init__(
+        self,
+        input_dim: int,
+        reservoir_size: int,
+        output_dim: int,
+        time_scale_std: float = 1.0,
+        **esn_kwargs
+    ):
+        super().__init__(
+            input_dim=input_dim,
+            reservoir_size=reservoir_size,
+            output_dim=output_dim,
+            **esn_kwargs
+        )
+
+        self.time_scale_std = time_scale_std
+        self.timescale_array = self._initialize_timescale_array()
+
+    def _initialize_timescale_array(self) -> np.ndarray:
+        """
+        Sample reservoir unit timescales from N(time_scale, time_scale_std) and clip any values below time_scale/5.
+        """
+        ts = np.random.normal(
+            loc=self.time_scale,
+            scale=self.time_scale_std,
+            size=self.reservoir_size
+        )
+        return ts.clip(min=self.time_scale / 5)
+
+    def _apply_reservoir_dynamics(self, x, u):
+        """
+        Updates the reservoir state using the leaky integrator equation.
+        """
+        alpha = self.step_size / self.timescale_array
+        return (1 - self.leaking_rate * alpha) * x + alpha * self.activation(
+            np.dot(self.W_in, u) + np.dot(self.W_res, x)
+        )
+    
+class PulseBandPassNetwork(BandPassNetwork, PulseEchoStateNetwork):
+    """Single‑pulse ESN whose reservoir units each have their own timescale."""
+    pass
