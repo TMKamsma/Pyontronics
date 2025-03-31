@@ -6,7 +6,7 @@ This repository provides an Echo State Network (ESN) framework designed for both
 
 We also introduce a functional operator $g_{\text{inf}}(V)$ that integrates an internal function $g(x, V)$ over the domain $[0,L]$:
 
-$g_{\text{inf}}(V) = \int_0^L g(x, V)/L \dx$.
+$g_{\text{inf}}(V) = \int_0^L g(x, V) \text{d}x/L$.
 
 This operator highlights how internal parameters can transform across a spatial or temporal domain, offering a robust way to capture complex input-output mappings in leaky networks.
 
