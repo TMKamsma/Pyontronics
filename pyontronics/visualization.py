@@ -1,6 +1,6 @@
 import networkx as nx
 import matplotlib.pyplot as plt
-from ESN import EchoStateNetwork
+from pyontronics import EchoStateNetwork
 
 def visualize_reservoir(esn: EchoStateNetwork, draw_labels=False):
     """
