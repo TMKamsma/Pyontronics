@@ -1,5 +1,5 @@
 # Optimization and Applications of Echo State Networks with Leaky-Integrator Neurons
-[![DOI badge](https://zenodo.org/badge/DOI/10.5281/zenodo.15113280.svg)](https://doi.org/10.5281/zenodo.15113280)
+[![DOI badge](https://zenodo.org/badge/DOI/10.5281/zenodo.15113279.svg)](https://doi.org/10.5281/zenodo.15113279)
 
 ## Abstract
 This repository provides an Echo State Network (ESN) framework designed for both continuous data streams and sets of shorter pulses, each with a single label. The ESN uses leaky-integrator neurons, which offer a controlled decay of past inputs and states. This design helps the network capture temporal dependencies across diverse applications such as signal classification, time-series prediction, and dynamic modeling.
