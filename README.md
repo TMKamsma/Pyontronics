@@ -2,13 +2,7 @@
 [![DOI badge](https://zenodo.org/badge/DOI/10.5281/zenodo.15113279.svg)](https://doi.org/10.5281/zenodo.15113279)
 
 ## Abstract
-This repository provides an Echo State Network (ESN) framework designed for both continuous data streams and sets of shorter pulses, each with a single label. The ESN uses leaky-integrator neurons, which offer a controlled decay of past inputs and states. This design helps the network capture temporal dependencies across diverse applications such as signal classification, time-series prediction, and dynamic modeling.
-
-We also introduce a functional operator $g_{\text{inf}}(V)$ that integrates an internal function $g(x, V)$ over the domain $[0,L]$:
-
-$g_{\text{inf}}(V) = \int_0^L g(x, V) \text{d}x/L$.
-
-This operator highlights how internal parameters can transform across a spatial or temporal domain, offering a robust way to capture complex input-output mappings in leaky networks.
+This repository provides an Echo State Network (ESN) and Band-pass Network framework based on a physical circuit. The code is designed for both continuous data streams and sets of shorter pulses, each with a single label. The networks contain (iontronic) memristors, whose dynamic conductance exhibit the behaviour of leaky-integrator neurons. The physical (sigmoidal) steady-state conductance $g_{\text{inf}}(V)$ of the memristor nodes takes on the role of the activation function, while its conductance memory exhibits the same dynamics as leaky integrator nodes.
 
 ## Unique Contribution
 Our approach handles both:
