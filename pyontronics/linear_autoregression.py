@@ -1,7 +1,6 @@
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, accuracy_score
-from sklearn.model_selection import train_test_split
 
 class LinearAutoregression:
     def __init__(self, window_size=10, lookback_stride=1, prediction_horizon=10):
