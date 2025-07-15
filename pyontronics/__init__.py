@@ -1,3 +1,4 @@
 from .echo_state_network import EchoStateNetwork, PulseEchoStateNetwork, BandPassNetwork, PulseBandPassNetwork
 from .steady_state_conductance import GinfActivator
 from .visualization import visualize_reservoir
+from .linear_autoregression import LinearAutoregression
