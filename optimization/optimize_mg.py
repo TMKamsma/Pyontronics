@@ -5,10 +5,38 @@ import os
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, root_path)
 
-from ESN import EchoStateNetwork, MackeyGlassGenerator, GinfActivator  # noqa: E402
+from pyontronics import EchoStateNetwork, GinfActivator  # noqa: E402
 
 ginf_activator = GinfActivator(V_min=-2, V_max=2, resolution=200, offset=True)
 
+def MackeyGlassGenerator(tau=17, n=1000, beta=0.2, gamma=0.1, n_samples=5000, dt=1.0, seed=None):
+    """
+    Generate Mackey-Glass time series
+    Parameters:
+    tau (int): Time delay
+    n (int): Number of points to generate
+    beta, gamma (float): Equation parameters
+    n_samples (int): Number of samples to keep
+    dt (float): Time step size
+    """
+    if seed:
+        np.random.seed(seed)
+
+    history_len = tau * 1
+    values = np.random.rand(history_len + n)
+
+    #values[:history_len] = 1.1
+
+    delay_steps = int(tau / dt)
+    if delay_steps <= 0:
+        delay_steps = 1
+
+    for t in range(history_len, history_len + n - 1):
+        x_tau = values[t - delay_steps]
+        dx_dt = beta * x_tau / (1 + x_tau**10) - gamma * values[t]
+        values[t + 1] = values[t] + dx_dt * dt
+
+    return values[history_len : history_len + n_samples]
 
 activation_functions = {
     "tanh": np.tanh,
@@ -72,13 +100,14 @@ def objective(trial):
     return min(1, np.mean((predictions - test_y) ** 2))
 
 
-try:
-    study_name = "ESN optimization MG"
-    storage = optuna.storages.RDBStorage(
-        "sqlite:///optuna_esn.db", engine_kwargs={"connect_args": {"timeout": 20.0}}
-    )
+study_name = "ESN optimization MG"
+storage = optuna.storages.RDBStorage(
+    "sqlite:///optuna_esn.db", engine_kwargs={"connect_args": {"timeout": 20.0}}
+)
 
+try:
     optuna.delete_study(study_name=study_name, storage=storage)
+    print("Deleted study")
 except Exception:
     print("No database available")
 
