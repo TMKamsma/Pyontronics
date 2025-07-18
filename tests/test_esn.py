@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from ESN import EchoStateNetwork, PulseEchoStateNetwork
+from pyontronics import EchoStateNetwork, PulseEchoStateNetwork
 
 @pytest.fixture
 def default_esn():

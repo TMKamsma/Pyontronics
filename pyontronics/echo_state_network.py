@@ -279,6 +279,9 @@ class PulseEchoStateNetwork(EchoStateNetwork):
                                 => one target per pulse
         """
 
+        if len(inputs) == 0 or len(targets) == 0:
+            raise ValueError("Input and target arrays must not be empty.")
+
         n_pulses = len(inputs)
         states = np.zeros((n_pulses, self.reservoir_size))
 
