@@ -13,11 +13,12 @@ reservoir_size=12
 teacher_ratio=0.25
 washout=0
 weight_seed=1
-test_num=100
+n_runs=100
+time_series_length=800
 
 # Generate synthetic data (simple sine wave prediction)
-t = np.linspace(0, 80 * np.pi, 800)
-dt_harmonic = 80 * np.pi/800
+t = np.linspace(0, 80 * np.pi, time_series_length)
+dt_harmonic = 80 * np.pi/time_series_length
 data_bpntest = np.sin(t) * np.cos(1.2*t)
 
 # Create input/output pairs for time series prediction
@@ -39,31 +40,35 @@ def objective_esn(trial):
         raise optuna.exceptions.TrialPruned("Spectral_radius < Leaking_rate")
 
     mse_mean = 0
-    for i in range(test_num):
-        # Initialize ESN
-        esn = EchoStateNetwork(
-            input_dim=1,
-            reservoir_size=reservoir_size,
-            output_dim=1,
-            leaking_rate=leaking_rate,
-            step_size=step_size,
-            time_scale=time_scale,
-            spectral_radius=spectral_radius,
-            sparsity=sparsity,
-            input_scaling=input_scaling,
-            regularization=regularization,
-            washout=washout,
-            activation=ginf_activator.activate,
-            weight_seed=weight_seed,
-            progress_bar=False,
-        )
-        esn.fit(inputs_bpntest, targets_bpntest)
-        predictions = esn.predict(inputs_bpntest, teacher_ratio=teacher_ratio)
+    for _i in range(n_runs):
+        try:
+            # Initialize ESN
+            esn = EchoStateNetwork(
+                input_dim=1,
+                reservoir_size=reservoir_size,
+                output_dim=1,
+                leaking_rate=leaking_rate,
+                step_size=step_size,
+                time_scale=time_scale,
+                spectral_radius=spectral_radius,
+                sparsity=sparsity,
+                input_scaling=input_scaling,
+                regularization=regularization,
+                washout=washout,
+                activation=ginf_activator.activate,
+                weight_seed=weight_seed,
+                progress_bar=False,
+            )
+            esn.fit(inputs_bpntest, targets_bpntest)
+            predictions = esn.predict(inputs_bpntest, teacher_ratio=teacher_ratio)
 
-        mse = (targets_bpntest[375,0]-predictions[375,0])**2
-        if mse<100:
-            mse_mean += mse
-    rmse = np.sqrt(mse_mean)
+            mse_mean += np.mean((targets_bpntest - predictions) ** 2)
+
+        except np.linalg.LinAlgError:
+            raise optuna.exceptions.TrialPruned("Singular matrix in fit (bad hyperparameters)")
+    rmse = np.sqrt(mse_mean)/n_runs
+    if rmse > 1:
+        raise optuna.exceptions.TrialPruned("RMSE > 1 (bad hyperparameters)")
     return rmse
     
 def objective_bpn(trial):
@@ -82,31 +87,33 @@ def objective_bpn(trial):
         raise optuna.exceptions.TrialPruned("Spectral_radius < Leaking_rate")
 
     mse_mean = 0
-    for i in range(test_num):
-        bpn = BandPassNetwork(
-            input_dim=1,
-            reservoir_size=reservoir_size,
-            output_dim=1,
-            leaking_rate=leaking_rate,
-            step_size=step_size,
-            time_scale=time_scale,
-            spectral_radius=spectral_radius,
-            sparsity=sparsity,
-            input_scaling=input_scaling,
-            regularization=regularization,
-            washout=washout,
-            activation=ginf_activator.activate,
-            weight_seed=weight_seed,
-            time_scale_std=time_scale_std,
-            progress_bar=False,
-        )
-        bpn.fit(inputs_bpntest, targets_bpntest)
-        predictions = bpn.predict(inputs_bpntest)
+    for _ in range(n_runs):
+        try:
+            bpn = BandPassNetwork(
+                input_dim=1,
+                reservoir_size=reservoir_size,
+                output_dim=1,
+                leaking_rate=leaking_rate,
+                step_size=step_size,
+                time_scale=time_scale,
+                spectral_radius=spectral_radius,
+                sparsity=sparsity,
+                input_scaling=input_scaling,
+                regularization=regularization,
+                washout=washout,
+                activation=ginf_activator.activate,
+                weight_seed=weight_seed,
+                time_scale_std=time_scale_std,
+                progress_bar=False,
+            )
+            bpn.fit(inputs_bpntest, targets_bpntest)
+            predictions = bpn.predict(inputs_bpntest)
 
-        mse = (targets_bpntest[375,0]-predictions[375,0])**2
-        if mse<100:
-            mse_mean += mse
-    rmse = np.sqrt(mse_mean)
+            mse_mean += np.mean((targets_bpntest - predictions) ** 2)
+
+        except np.linalg.LinAlgError:
+            raise optuna.exceptions.TrialPruned("Singular matrix in fit (bad hyperparameters)")
+    rmse = np.sqrt(mse_mean)/n_runs
     return rmse
 
 for net_type, objective_fn in [
@@ -128,4 +135,4 @@ for net_type, objective_fn in [
         storage=storage,
         load_if_exists=True,
     )
-    study.optimize(objective_fn, n_trials=400, n_jobs=-1)
+    study.optimize(objective_fn, n_trials=100, n_jobs=-1)
