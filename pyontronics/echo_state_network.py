@@ -17,6 +17,7 @@ class EchoStateNetwork:
         input_scaling=1.0,
         regularization=1e-4,
         washout=100,
+        washout_inference=0,
         weight_seed=42,
         activation=np.tanh,
         guarantee_ESP=True,
@@ -37,6 +38,7 @@ class EchoStateNetwork:
         self.input_scaling = input_scaling
         self.regularization = regularization
         self.washout = washout
+        self.washout_inference = washout_inference
         self.weight_seed = weight_seed
         self.activation = activation
         self.guarantee_ESP = guarantee_ESP
@@ -178,33 +180,31 @@ class EchoStateNetwork:
         if inputs.shape[0] == 0 or targets.shape[0] == 0:
             raise ValueError("Input and target arrays must not be empty.")
 
+        if inputs.shape[0] <= self.washout:
+             raise ValueError("Input length must be longer than washout period.")    
+
         n_steps = inputs.shape[0]
-        extended_length = n_steps + self.washout
-
-        # Build extended input by prepending washout zeros
-        extended_inputs = np.zeros((extended_length, self.input_dim))
-        extended_inputs[self.washout :] = inputs
-
+        
         # Collect reservoir states over extended input
-        states = np.zeros((extended_length, self.reservoir_size))
+        states = np.zeros((n_steps, self.reservoir_size))
         x = np.zeros(self.reservoir_size)
 
         for t in tqdm(
-            range(extended_length),
+            range(n_steps),
             desc="Training (time-step)",
             disable=self.progress_bar,
-            total=extended_length,
+            total=n_steps,
         ):
-            x = self._apply_reservoir_dynamics(x, extended_inputs[t])
+            x = self._apply_reservoir_dynamics(x, inputs[t])
             states[t] = x
 
         # Discard the first `washout` states
         states = states[self.washout :]
-
+        targets = targets[self.washout :]
         # Targets for each time step must align with the last states
         # so we do not discard anything from 'targets' if it already had shape (n_steps, output_dim).
         # Make sure 'targets' also has shape (n_steps, output_dim).
-        if len(targets) != n_steps:
+        if len(targets) != n_steps - self.washout:
             raise ValueError(
                 "Mismatch: inputs has n_steps={} but targets has {} rows.".format(
                     n_steps, len(targets)
@@ -232,30 +232,30 @@ class EchoStateNetwork:
             raise ValueError(
                 "Teacher forcing is only supported for single-input ESNs."
             )
-
+        
+        if inputs.shape[0] <= self.washout_inference:
+             raise ValueError("Input length must be longer than washout_inference.") 
+        
         n_steps = inputs.shape[0]
-        extended_length = n_steps + self.washout
-        extended_inputs = np.zeros((extended_length, self.input_dim))
-        extended_inputs[self.washout :] = inputs
 
-        teacher_steps = int(teacher_ratio * extended_length)
+        teacher_steps = int(n_steps*teacher_ratio)
         x = (
             np.zeros(self.reservoir_size)
             if initial_state is None
             else initial_state.copy()
         )
-        all_states = np.zeros((extended_length, self.reservoir_size))
+        all_states = np.zeros((n_steps, self.reservoir_size))
 
-        for t in range(extended_length):
+        for t in range(n_steps):
             if t < teacher_steps:
-                x = self._apply_reservoir_dynamics(x, extended_inputs[t])
+                x = self._apply_reservoir_dynamics(x, inputs[t])
             else:
                 previous_network_output = self.W_out @ all_states[t - 1].T
                 x = self._apply_reservoir_dynamics(x, previous_network_output)
             all_states[t] = x
 
         # Discard the first washout states
-        trimmed_states = all_states[self.washout :]
+        trimmed_states = all_states[self.washout_inference :]
 
         # Compute output at every time step
         outputs = (self.W_out @ trimmed_states.T).T
