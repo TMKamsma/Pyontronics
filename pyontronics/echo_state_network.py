@@ -23,6 +23,8 @@ class EchoStateNetwork:
         guarantee_ESP=True,
         progress_bar=True,
         apply_dynamics_per_step_size=1,
+        choose_W_in=False,
+        W_in_input=None,
     ):
         """
         Echo State Network with optional guarantee of the Echo State Property (ESP).
@@ -45,6 +47,8 @@ class EchoStateNetwork:
         self.guarantee_ESP = guarantee_ESP
         self.progress_bar = not progress_bar
         self.apply_dynamics_per_step_size = apply_dynamics_per_step_size
+        self.choose_W_in = choose_W_in
+        self.W_in_input = W_in_input
 
         self._check_parameters()
 
@@ -68,6 +72,19 @@ class EchoStateNetwork:
 
         if not isinstance(self.apply_dynamics_per_step_size, int) or self.apply_dynamics_per_step_size < 1:
             raise ValueError("apply_dynamics_per_step_size must be a positive integer")
+        
+        if self.choose_W_in:
+            # Validate custom input weights
+            if not isinstance(self.W_in_input, np.ndarray):
+                raise TypeError(
+                    f"W_in_input must be a numpy array, got {type(self.W_in_input)}"
+                )
+                
+            if self.W_in_input.shape != (self.reservoir_size, self.input_dim):
+                raise ValueError(
+                    f"W_in_input must have shape {(self.reservoir_size, self.input_dim)}, "
+                    f"got {self.W_in_input.shape}"
+                )
 
     def _initialize_all_weights(self):
         """Initializes input and reservoir weights, then adjusts spectral radius."""
@@ -105,9 +122,14 @@ class EchoStateNetwork:
 
     def _initialize_input_weights(self):
         """Creates input weight matrix of shape (reservoir_size, input_dim)."""
-        return (
-            np.random.rand(self.reservoir_size, self.input_dim) - 0.5
-        ) * self.input_scaling
+        if self.choose_W_in:
+            # Return self chosen W_in
+            return self.W_in_input.copy()  # Return a copy to prevent external modifications
+        else:
+            # Default random initialization
+            return (
+                np.random.rand(self.reservoir_size, self.input_dim) - 0.5
+            ) * self.input_scaling
 
     def _initialize_reservoir_weights(self):
         """
