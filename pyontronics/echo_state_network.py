@@ -22,6 +22,7 @@ class EchoStateNetwork:
         activation=np.tanh,
         guarantee_ESP=True,
         progress_bar=True,
+        apply_dynamics_per_step_size=1,
     ):
         """
         Echo State Network with optional guarantee of the Echo State Property (ESP).
@@ -43,6 +44,7 @@ class EchoStateNetwork:
         self.activation = activation
         self.guarantee_ESP = guarantee_ESP
         self.progress_bar = not progress_bar
+        self.apply_dynamics_per_step_size = apply_dynamics_per_step_size
 
         self._check_parameters()
 
@@ -63,6 +65,9 @@ class EchoStateNetwork:
             raise ValueError(
                 "spectral_radius must be < leaking_rate if guarantee_ESP is True."
             )
+
+        if not isinstance(self.apply_dynamics_per_step_size, int) or self.apply_dynamics_per_step_size < 1:
+            raise ValueError("apply_dynamics_per_step_size must be a positive integer")
 
     def _initialize_all_weights(self):
         """Initializes input and reservoir weights, then adjusts spectral radius."""
@@ -140,10 +145,13 @@ class EchoStateNetwork:
         """
         Updates the reservoir state using the leaky integrator equation.
         """
-        alpha = self.step_size / self.time_scale
-        return (1 - self.leaking_rate * alpha) * x + alpha * self.activation(
-            np.dot(self.W_in, u) + np.dot(self.W_res, x)
-        )
+        substep_size = self.step_size / self.apply_dynamics_per_step_size
+        alpha = substep_size / self.time_scale
+        activation_input = np.dot(self.W_in, u) + np.dot(self.W_res, x)
+            
+        for _ in range(self.apply_dynamics_per_step_size):
+            x = (1 - self.leaking_rate * alpha) * x + alpha * self.activation(activation_input)
+        return x
 
     def fit(self, inputs, targets):
         """
@@ -352,8 +360,7 @@ class BandPassNetwork(EchoStateNetwork):
     """
     Echo State Network variant whose reservoir units each have their own timescale.
 
-    Inherits all parameters and behaviour from EchoStateNetwork, but treats the
-    parent's `time_scale` as the average timescale for every unit. 
+    Inherits all parameters and behaviour from EchoStateNetwork, but creates array of timescales.
 
     New arguments:
       • time_scale_std (float): standard deviation of per-unit timescales.
@@ -429,10 +436,13 @@ class BandPassNetwork(EchoStateNetwork):
         """
         Updates the reservoir state using the leaky integrator equation.
         """
-        alpha = self.step_size / self.timescale_array
-        return (1 - self.leaking_rate * alpha) * x + alpha * self.activation(
-            np.dot(self.W_in, u) + np.dot(self.W_res, x)
-        )
+        substep_size = self.step_size / self.apply_dynamics_per_step_size
+        alpha = substep_size / self.timescale_array
+        activation_input = np.dot(self.W_in, u) + np.dot(self.W_res, x)
+        
+        for _ in range(self.apply_dynamics_per_step_size):
+            x = (1 - self.leaking_rate * alpha) * x + alpha * self.activation(activation_input)
+        return x
     
 class PulseBandPassNetwork(BandPassNetwork, PulseEchoStateNetwork):
     """Single‑pulse ESN whose reservoir units each have their own timescale."""
