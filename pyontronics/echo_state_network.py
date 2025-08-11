@@ -355,11 +355,10 @@ class BandPassNetwork(EchoStateNetwork):
     Inherits all parameters and behaviour from EchoStateNetwork, but treats the
     parent's `time_scale` as the average timescale for every unit. 
 
-    New argument:
+    New arguments:
       • time_scale_std (float): standard deviation of per-unit timescales.
-
-    Internally, each reservoir unit's timescale is sampled from a normal distribution
-    N(time_scale, time_scale_std) and clipped to a minimum of time_scale/5.
+      • choose_timescales (bool): if True, uses timescale_array_input instead of random timescales
+      • timescale_array_input (array): custom timescale array (only used if choose_timescales=True)
     """
 
     def __init__(
@@ -368,6 +367,8 @@ class BandPassNetwork(EchoStateNetwork):
         reservoir_size: int,
         output_dim: int,
         time_scale_std: float = 1.0,
+        choose_timescales: bool = False,
+        timescale_array_input: np.ndarray = None,
         **esn_kwargs
     ):
         super().__init__(
@@ -378,12 +379,45 @@ class BandPassNetwork(EchoStateNetwork):
         )
 
         self.time_scale_std = time_scale_std
+        self.choose_timescales = choose_timescales
+        self.timescale_array_input = timescale_array_input
+        
+        # Initialize timescale array
         self.timescale_array = self._initialize_timescale_array()
+        
+        # Validate custom timescales if provided
+        if self.choose_timescales:
+            self._validate_custom_timescales()
+
+    def _validate_custom_timescales(self):
+        """Validate the custom timescale array input."""
+        if self.timescale_array_input is None:
+            raise ValueError("timescale_array_input cannot be None when choose_timescales=True")
+            
+        if not isinstance(self.timescale_array_input, np.ndarray):
+            raise TypeError(
+                f"timescale_array_input must be a numpy array, got {type(self.timescale_array_input)}"
+            )
+            
+        if self.timescale_array_input.shape != (self.reservoir_size,):
+            raise ValueError(
+                f"timescale_array_input must have shape ({self.reservoir_size},), "
+                f"got {self.timescale_array_input.shape}"
+            )
+            
+        if np.any(self.timescale_array_input <= 0):
+            raise ValueError("All timescales must be positive")
 
     def _initialize_timescale_array(self) -> np.ndarray:
         """
-        Sample reservoir unit timescales from N(time_scale, time_scale_std) and clip any values below time_scale/5.
+        Initialize timescale array either:
+        - From normal distribution (default)
+        - From user-provided array (if choose_timescales=True)
         """
+        if self.choose_timescales:
+            return np.array(self.timescale_array_input)  # Ensure numpy array
+            
+        # Default behavior: random timescales
         ts = np.random.normal(
             loc=self.time_scale,
             scale=self.time_scale_std,
