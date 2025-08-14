@@ -109,7 +109,7 @@ class NCNM_activator:
     TM Kamsma, J Kim, K Kim, WQ Boon, C Spitoni, J Park, R van Roij
     Proceedings of the National Academy of Sciences 121 (18), e2320242121
     """
-    def __init__(self, V_min=-2, V_max=2, resolution=200, offset=False):
+    def __init__(self, V_min=-2, V_max=2, resolution=200, offset=False, tanh_transform = True):
         """
         Initializes the GinfActivator and precomputes the lookup table.
 
@@ -118,6 +118,7 @@ class NCNM_activator:
         - V_max (float): Maximum V value for the lookup table.
         - resolution (int): Number of points in the lookup table.
         - offset (bool): Offset the activator mean to 0
+        - tanh_transform: ad hoc approach to convert linear NCNM conductance equation to sigmoidal shape
         """
 
         self.Rb = 100 * 10**-6
@@ -154,6 +155,9 @@ class NCNM_activator:
 
         if offset:
             self.ginf_values -= np.mean(self.ginf_values)
+            
+        if tanh_transform:
+            self.ginf_values = np.tanh(self.ginf_values)
 
     def _R(self, x):
         """Computes R(x, L)"""
