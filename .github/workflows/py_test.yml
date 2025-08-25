@@ -20,9 +20,8 @@ jobs:
           python -m pip install --upgrade pip .[graph,dev]
       - name: Lint with Ruff
         run: |
-          pip install ruff
-          ruff --format=github --target-version=py311 .
+          ruff check --format=github --target-version=py311 .
         continue-on-error: true
       - name: Test with pytest and coverage
         run: |
-          pytest --cov=pyontronics --cov-report=term-missing --cov-report=xml
+          pytest -v --cov=pyontronics --cov-report=term-missing --cov-report=xml
