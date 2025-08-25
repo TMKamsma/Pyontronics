@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from pyontronics import EchoStateNetwork, PulseEchoStateNetwork
+from pyontronics.activators import GinfActivator, NCNM_activator
 
 @pytest.fixture
 def default_esn():
@@ -53,6 +54,26 @@ def single_input_esn():
         guarantee_ESP=False,
         progress_bar=False,
     )
+
+@pytest.fixture
+def ginf_activator_default():
+    return GinfActivator()
+
+@pytest.fixture
+def ginf_activator_offset():
+    return GinfActivator(offset=True)
+
+@pytest.fixture
+def ncnm_activator_default():
+    return NCNM_activator()
+
+@pytest.fixture
+def ncnm_activator_offset():
+    return NCNM_activator(offset=True)
+
+@pytest.fixture
+def ncnm_activator_linear():
+    return NCNM_activator(tanh_transform=False)
 
 # ===== Tests for EchoStateNetwork (Timestep Mode) =====
 
@@ -207,3 +228,76 @@ def test_teacher_ratio_free_running(single_input_esn):
     
     # Assert that the two predictions differ.
     assert not np.allclose(preds_teacher, preds_free)
+
+# ===== Tests for Activators =====
+
+def test_ginf_lookup_table_shape(ginf_activator_default):
+    V, g = ginf_activator_default.get_lookup_table()
+    assert V.shape == g.shape
+    assert len(V) == 200
+
+def test_ginf_offset_mean_zero(ginf_activator_offset):
+    _, g = ginf_activator_offset.get_lookup_table()
+    assert np.isclose(np.mean(g), 0, atol=1e-10)
+
+def test_ginf_activate_within_range(ginf_activator_default):
+    V = np.linspace(-2, 2, 10)
+    g = ginf_activator_default.activate(V)
+    assert g.shape == V.shape
+    assert np.all(np.isfinite(g))
+
+def test_ginf_activate_out_of_bounds(ginf_activator_default):
+    V = np.array([-10, 0, 10])
+    g = ginf_activator_default.activate(V)
+    # Should clip to min/max
+    assert np.isfinite(g).all()
+    assert g[0] == ginf_activator_default.ginf_values[0]
+    assert g[-1] == ginf_activator_default.ginf_values[-1]
+
+def test_ncnm_lookup_table_shape(ncnm_activator_default):
+    V, g = ncnm_activator_default.get_lookup_table()
+    assert V.shape == g.shape
+    assert len(V) == 200
+
+def test_ncnm_offset_mean_zero(ncnm_activator_offset):
+    _, g = ncnm_activator_offset.get_lookup_table()
+    assert np.isclose(np.mean(g), 0, atol=1e-10)
+
+def test_ncnm_activate_within_range(ncnm_activator_default):
+    V = np.linspace(-2, 2, 10)
+    g = ncnm_activator_default.activate(V)
+    assert g.shape == V.shape
+    assert np.all(np.isfinite(g))
+
+def test_ncnm_activate_out_of_bounds(ncnm_activator_default):
+    V = np.array([-10, 0, 10])
+    g = ncnm_activator_default.activate(V)
+    assert np.isfinite(g).all()
+    assert g[0] == ncnm_activator_default.ginf_values[0]
+    assert g[-1] == ncnm_activator_default.ginf_values[-1]
+
+def test_ncnm_linear_vs_tanh(ncnm_activator_linear, ncnm_activator_default):
+    V = np.linspace(-2, 2, 10)
+    g_linear = ncnm_activator_linear.activate(V)
+    g_tanh = ncnm_activator_default.activate(V)
+    # Should not be identical
+    assert not np.allclose(g_linear, g_tanh)
+
+def test_ginf_compute_ginf_scalar(ginf_activator_default):
+    val = ginf_activator_default._compute_ginf(0.5)
+    assert np.isscalar(val)
+    assert np.isfinite(val)
+
+def test_ncnm_compute_ginf_scalar(ncnm_activator_default):
+    val = ncnm_activator_default._compute_ginf(0.5)
+    assert np.isscalar(val)
+    assert np.isfinite(val)
+
+def test_ginf_repr_str(ginf_activator_default):
+    # Just check that repr/str do not error
+    assert isinstance(str(ginf_activator_default), str)
+    assert isinstance(repr(ginf_activator_default), str)
+
+def test_ncnm_repr_str(ncnm_activator_default):
+    assert isinstance(str(ncnm_activator_default), str)
+    assert isinstance(repr(ncnm_activator_default), str)
