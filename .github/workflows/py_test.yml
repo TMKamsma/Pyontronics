@@ -20,7 +20,7 @@ jobs:
           python -m pip install --upgrade pip .[graph,dev]
       - name: Lint with Ruff
         run: |
-          ruff check --format=github --target-version=py311 .
+          ruff check --target-version=py311 .
         continue-on-error: true
       - name: Test with pytest and coverage
         run: |
