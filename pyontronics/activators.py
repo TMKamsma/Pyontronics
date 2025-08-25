@@ -9,7 +9,7 @@ class GinfActivator:
     TM Kamsma, WQ Boon, T Ter Rele, C Spitoni, R van Roij
     Physical Review Letters 130 (26), 268401
     """
-    
+
     def __init__(self, V_min=-2, V_max=2, resolution=200, offset=False):
         """
         Initializes the GinfActivator and precomputes the lookup table.
@@ -109,7 +109,10 @@ class NCNM_activator:
     TM Kamsma, J Kim, K Kim, WQ Boon, C Spitoni, J Park, R van Roij
     Proceedings of the National Academy of Sciences 121 (18), e2320242121
     """
-    def __init__(self, V_min=-2, V_max=2, resolution=200, offset=False, tanh_transform = True):
+
+    def __init__(
+        self, V_min=-2, V_max=2, resolution=200, offset=False, tanh_transform=True
+    ):
         """
         Initializes the GinfActivator and precomputes the lookup table.
 
@@ -140,22 +143,38 @@ class NCNM_activator:
         self.lambda_D = 3.1 * 10**-9
         self.Rpore = 2 * self.lambda_D
         self.g0 = (
-            2*self.cb
+            2
+            * self.cb
             * self.D
-            * self.eta*self.epsilon
-            * 2*(self.Rb-self.Rt)*self.H
-            / (self.kB * self.T * self.L *np.log(self.Rb/self.Rt))
-            * (1+4*self.lambda_D/self.Rpore*(np.cosh(self.eCharge*self.psi0/(2*self.kB*self.T))-1))
+            * self.eta
+            * self.epsilon
+            * 2
+            * (self.Rb - self.Rt)
+            * self.H
+            / (self.kB * self.T * self.L * np.log(self.Rb / self.Rt))
+            * (
+                1
+                + 4
+                * self.lambda_D
+                / self.Rpore
+                * (np.cosh(self.eCharge * self.psi0 / (2 * self.kB * self.T)) - 1)
+            )
         )
 
         self.V_values = np.linspace(V_min, V_max, resolution)
-        self.ginf_values = np.array(
-            [((self._compute_ginf(V)) / (2*self.cb*self.L)) for V in self.V_values]
-        ) - 1
+        self.ginf_values = (
+            np.array(
+                [
+                    ((self._compute_ginf(V)) / (2 * self.cb * self.L))
+                    for V in self.V_values
+                ]
+            )
+            - 1
+        )
 
         if offset:
             self.ginf_values -= np.mean(self.ginf_values)
-            
+
         if tanh_transform:
             self.ginf_values = np.tanh(self.ginf_values)
 
@@ -167,8 +186,23 @@ class NCNM_activator:
         """Computes g(x, V)"""
         R_xL = self._R(x)
 
-        term1 = 2*self.cb
-        term2 = -self.c_eb*(self.eCharge*V)/(self.kB*self.T)*(self.Rb-self.Rt)/self.Rb*(np.log(self.Rb/self.Rt)*np.log(self.c_et/self.c_eb*(self.L-x)/self.L+x/self.L)+np.log(R_xL/self.Rt)*np.log(self.c_et/self.c_eb))/((np.log(self.Rb/self.Rt))**2*(self.c_eb/self.c_et-self.Rt/self.Rb))
+        term1 = 2 * self.cb
+        term2 = (
+            -self.c_eb
+            * (self.eCharge * V)
+            / (self.kB * self.T)
+            * (self.Rb - self.Rt)
+            / self.Rb
+            * (
+                np.log(self.Rb / self.Rt)
+                * np.log(self.c_et / self.c_eb * (self.L - x) / self.L + x / self.L)
+                + np.log(R_xL / self.Rt) * np.log(self.c_et / self.c_eb)
+            )
+            / (
+                (np.log(self.Rb / self.Rt)) ** 2
+                * (self.c_eb / self.c_et - self.Rt / self.Rb)
+            )
+        )
 
         return term1 - term2
 
