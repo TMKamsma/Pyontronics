@@ -1,95 +1,89 @@
-# Physical Reservoir Computing with (iontronic) Leaky-Integrator Neurons
+# Pyontronics
 
 [![DOI badge](https://zenodo.org/badge/DOI/10.5281/zenodo.15113279.svg)](https://doi.org/10.5281/zenodo.15113279)
 
-## Abstract
+**Pyontronics** is a Python package for simulating iontronic neuromorphic devices and Echo State Networks (ESNs). It provides tools for physical reservoir computing, including leaky-integrator neurons, physical activation functions, and flexible network architectures for both time series and pulse-based data.
 
-This repository provides an Echo State Network (ESN) and Band-pass Network (BPN) framework based on a physical circuit. The code is designed for both continuous data streams and sets of shorter pulses, each with a single label. The networks contain (iontronic) memristors, whose dynamic conductance exhibit the behaviour of leaky-integrator neurons. The physical (sigmoidal) steady-state conductance $g_{\text{inf}}(V)$ of the memristor nodes takes on the role of the activation function, while its conductance memory exhibits the same dynamics as leaky integrator nodes.
+## Installation
 
-## Unique Contribution
-
-Our approach handles both:
-
-1. Single time series (predicting at each step).
-2. Multiple shorter series (pulses) (predicting a single label at the end of each pulse).
-
-The leaky-integrator neurons and the integrated operator $g_{\text{inf}}$ allow for flexible state evolution that aligns with many practical tasks.
-
-# usage
-
-1. Clone or download this repository.
-2. Install required libraries:
-```console
-pip install -r .\requirements.txt
+Install the core package:
+```bash
+pip install .
 ```
-3. Open and run the demo notebook included in the repository.
 
-### EchoStateNetwork Core Parameters
+To enable network visualization features, install with the optional `graph` dependency:
+```bash
+pip install .[graph]
+```
 
-| Parameter               | Type       | Default | Description |
-|-------------------------|------------|---------|-------------|
-| `input_dim`             | int        | -       | Dimension of input features |
-| `reservoir_size`        | int        | -       | Number of neurons in reservoir |
-| `output_dim`            | int        | -       | Dimension of output targets |
-| `leaking_rate`          | float      | 1.0     | Self-coupling constant (a ∈ (0,1]) |
-| `step_size`             | float      | 0.3     | Discrete time step (δ) |
-| `time_scale`            | float      | 1.0     | Base timescale (c) |
-| `spectral_radius`       | float      | 0.9     | Spectral radius of W_res |
-| `sparsity`              | float      | 0.5     | Fraction of zero weights in W_res |
-| `input_scaling`         | float      | 1.0     | Scaling factor applied to input |
-| `regularization`        | float      | 1e-4    | Ridge regression regularization |
-| `washout`               | int        | 100     | Initial timesteps to discard during training |
-| `washout_inference`     | int        | 0       | Initial timesteps to discard during prediction |
-| `weight_seed`           | int        | 42      | Random seed for weight initialization |
-| `activation`            | callable   | np.tanh | Nonlinear activation function |
-| `guarantee_ESP`         | bool       | True    | Enforce Echo State Property |
-| `progress_bar`          | bool       | True    | Show training progress bars |
-| `apply_dynamics_per_step_size` | int | 1 | Number of substeps per Δt |
-| `choose_W_in`           | bool       | False   | Use custom input weights |
-| `W_in_input`            | np.ndarray | None    | If `choose_W_in = True`: Custom W_in matrix (shape [reservoir_size, input_dim]) |
+## Features
 
-### BandPassNetwork Additional Parameters
+- **Echo State Network (ESN)**: Flexible implementation with physical parameters and activation functions.
+- **BandPassNetwork**: ESN variant with per-unit timescales for richer dynamics.
+- **Physical Activation Functions**: Use conductance models derived from iontronic devices.
+- **Linear Autoregression**: Simple AR models for benchmarking and comparison.
+- **Visualization**: Visualize ESN architectures as directed graphs (requires `networkx`).
+- **Pulse-based and Continuous Data Support**: Train and predict on both single time series and sets of pulses.
 
-| Parameter               | Type       | Default | Description |
-|-------------------------|------------|---------|-------------|
-| `time_scale_std`        | float      | 1.0     | Standard deviation of per-neuron timescale distribution |
-| `choose_timescales`     | bool       | False   | Use custom timescale array |
-| `timescale_array_input` | np.ndarray | None    | If `choose_timescales = True`: Custom timescales (shape [reservoir_size,]) |
+## Usage Example
 
-### Physical Interpretation
+```python
+from pyontronics import EchoStateNetwork, visualize_reservoir
 
-Key physical relationships:
-- **Physical timescale**: τ = `time_scale`/`leaking_rate` = c/a
-- **Physical conductance as activation**: `activation` can be set to physical dynamic conductance
+# Create an ESN
+esn = EchoStateNetwork(
+    input_dim=1,
+    reservoir_size=100,
+    output_dim=1,
+    activation='tanh'
+)
 
-# Figures
+# Fit to data
+esn.fit(inputs, targets)
 
-<img src="output/ginf_activator_plot.png" width=50% height=50%>
-<img src="output/mg_prediction_plot.png" width=50% height=50%>
-<img src="output/mg_phase_space_plot.png" width=50% height=50%>
-<img src="output/sine_prediction_plot.png" width=50% height=50%>
+# Predict
+outputs = esn.predict(inputs)
 
-# Optimization
+# Visualize (requires networkx)
+visualize_reservoir(esn)
+```
 
-The parameters of the ESN can be optimized for a dataset using optuna. Example
-files for optimization are included in the repository in the optimization
-folder. Use `optuna-dashboard sqlite:///optuna_esn.db` to visualize the results.
+## Optional Visualization
 
-This code requires the optuna library. Install it using `pip install optuna`.
-The dashboard requires the optuna-dashboard library. Install it using 
-`pip install optuna-dashboard`.
+To visualize network architectures, install with:
+```bash
+pip install .[graph]
+```
+and use `visualize_reservoir(esn)`.
+
+## Functionality Overview
+
+- **Reservoir Computing**: Simulate and train ESNs with physical or standard activation functions.
+- **Physical Models**: Use `GinfActivator` and `NCNM_activator` for realistic conductance-based activations.
+- **Pulse and Bandpass Networks**: Specialized classes for pulse-based data and variable timescales.
+- **Linear Autoregression**: Benchmark with classic AR models.
+- **Visualization**: Plot ESN graphs with node and edge coloring.
+
+## API Highlights
+
+- `EchoStateNetwork`: Core ESN class.
+- `BandPassNetwork`: ESN with per-unit timescales.
+- `PulseEchoStateNetwork`, `PulseBandPassNetwork`: For pulse-based tasks.
+- `GinfActivator`, `NCNM_activator`: Physical activation functions.
+- `LinearAutoregression`: Simple AR model.
+- `visualize_reservoir`: Visualize ESN structure (optional).
+
+## License
+
+MIT License
 
 ## Authors
 
-Tim Kamsma
-
+Tim Kamsma  
 Jelle Jasper Teijema
 
+## Contact
 
-# License
+For questions, please contact t.m.kamsma@uu.nl
 
-This extension is released under the MIT License.
-
-# Contact
-
-This work is part of  https://doi.org/10.48550/arXiv.2505.13451. For questions, please contact t.m.kamsma@uu.nl
+Project homepage: [https://github.com/TMKamsma/Pyontronics](https://github.com/TMKamsma/Pyontronics)

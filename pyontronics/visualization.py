@@ -1,11 +1,22 @@
-import networkx as nx
+try:
+    import networkx as nx
+except ImportError:
+    nx = None
+
 import matplotlib.pyplot as plt
 from pyontronics import EchoStateNetwork
+
 
 def visualize_reservoir(esn: EchoStateNetwork, draw_labels=False):
     """
     Visualizes the ESN as a directed graph with NetworkX.
     """
+
+    if nx is None:
+        raise ImportError(
+            "networkx is required for visualization"
+            "Install it with 'pip install pyontronics[graph]'"
+        )
 
     G = nx.DiGraph()
     input_nodes = [f"inp_{i}" for i in range(esn.input_dim)]
