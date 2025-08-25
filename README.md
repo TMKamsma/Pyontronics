@@ -72,6 +72,12 @@ and use `visualize_reservoir(esn)`.
 - `LinearAutoregression`: Simple AR model.
 - `visualize_reservoir`: Visualize ESN structure (optional).
 
+## Development
+Install the development dependencies with:
+```bash
+pip install .[graph,dev]
+```
+
 ## License
 
 MIT License
