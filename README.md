@@ -21,7 +21,6 @@ pip install .[graph]
 - **Echo State Network (ESN)**: Flexible implementation with physical parameters and activation functions.
 - **BandPassNetwork**: ESN variant with per-unit timescales for richer dynamics.
 - **Physical Activation Functions**: Use conductance models derived from iontronic devices.
-- **Linear Autoregression**: Simple AR models for benchmarking and comparison.
 - **Visualization**: Visualize ESN architectures as directed graphs (requires `networkx`).
 - **Pulse-based and Continuous Data Support**: Train and predict on both single time series and sets of pulses.
 
@@ -47,29 +46,12 @@ outputs = esn.predict(inputs)
 visualize_reservoir(esn)
 ```
 
-## Optional Visualization
-
-To visualize network architectures, install with:
-```bash
-pip install .[graph]
-```
-and use `visualize_reservoir(esn)`.
-
-## Functionality Overview
-
-- **Reservoir Computing**: Simulate and train ESNs with physical or standard activation functions.
-- **Physical Models**: Use `GinfActivator` and `NCNM_activator` for realistic conductance-based activations.
-- **Pulse and Bandpass Networks**: Specialized classes for pulse-based data and variable timescales.
-- **Linear Autoregression**: Benchmark with classic AR models.
-- **Visualization**: Plot ESN graphs with node and edge coloring.
-
 ## API Highlights
 
 - `EchoStateNetwork`: Core ESN class.
 - `BandPassNetwork`: ESN with per-unit timescales.
 - `PulseEchoStateNetwork`, `PulseBandPassNetwork`: For pulse-based tasks.
 - `GinfActivator`, `NCNM_activator`: Physical activation functions.
-- `LinearAutoregression`: Simple AR model.
 - `visualize_reservoir`: Visualize ESN structure (optional).
 
 ## Development
