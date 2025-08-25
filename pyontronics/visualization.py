@@ -5,6 +5,7 @@ except ImportError:
 
 import matplotlib.pyplot as plt
 from pyontronics import EchoStateNetwork
+import matplotlib.colors as mcolors
 
 
 def visualize_reservoir(esn: EchoStateNetwork, draw_labels=False):
@@ -109,12 +110,7 @@ def visualize_reservoir(esn: EchoStateNetwork, draw_labels=False):
         """
         Returns RGBA colors with alpha scaled by |weight|.
         """
-        import matplotlib.colors as mcolors
-
-        if weights:
-            max_w = max(abs(w) for w in weights)
-        else:
-            max_w = 1e-9
+        max_w = max(abs(w) for w in weights)
 
         colors = []
         for w in weights:
