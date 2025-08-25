@@ -35,7 +35,6 @@ esn = EchoStateNetwork(
     input_dim=1,
     reservoir_size=100,
     output_dim=1,
-    activation='tanh'
 )
 
 # Fit to data

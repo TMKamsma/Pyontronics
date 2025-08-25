@@ -1,9 +1,0 @@
-numpy
-matplotlib
-ipykernel
-IProgress
-ipywidgets
-scipy
-tqdm
-pandas
-networkx
