@@ -5,7 +5,9 @@ doi: 10.5281/zenodo.15113279
 date-released: 2025-03-31
 url: "https://github.com/TMKamsma/Pyontronics"
 authors:
-  - family-names: "Kamsma"
-    given-names: "Tim M"
-  - family-names: "Teijema"
-    given-names: "Jelle J"
+- family-names: "Kamsma"
+  given-names: "Tim M"
+  orcid: "https://orcid.org/0000-0002-8898-8337"
+- family-names: "Teijema"
+  given-names: "Jelle J"
+  orcid: "https://orcid.org/0000-0001-9282-4311"
