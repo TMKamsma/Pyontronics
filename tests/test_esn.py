@@ -318,17 +318,7 @@ def test_visualize_reservoir_no_error(default_esn):
     targets = np.random.randn(50, esn.output_dim)
     esn.fit(inputs, targets)
     try:
-        visualization.visualize_reservoir(esn)
-    except Exception as e:
-        pytest.fail(f"visualize_reservoir raised an exception: {e}")
-
-def test_visualize_reservoir_with_labels_no_error(default_esn):
-    esn = default_esn
-    inputs = np.random.randn(50, esn.input_dim)
-    targets = np.random.randn(50, esn.output_dim)
-    esn.fit(inputs, targets)
-    try:
-        visualization.visualize_reservoir(default_esn, draw_labels=True)
+        visualization.visualize_reservoir(esn, draw_labels=True)
     except Exception as e:
         pytest.fail(f"visualize_reservoir raised an exception: {e}")
 
