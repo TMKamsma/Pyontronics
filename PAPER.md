@@ -18,9 +18,9 @@ The leaky-integrator neurons and the integrated operator $g_{\text{inf}}$ allow 
 # usage
 
 1. Clone or download this repository.
-2. Install required libraries:
+2. Install the pyontronics package:
 ```console
-pip install -r .\requirements.txt
+pip install .[graph]
 ```
 3. Open and run the demo notebook included in the repository.
 
@@ -78,18 +78,3 @@ folder. Use `optuna-dashboard sqlite:///optuna_esn.db` to visualize the results.
 This code requires the optuna library. Install it using `pip install optuna`.
 The dashboard requires the optuna-dashboard library. Install it using 
 `pip install optuna-dashboard`.
-
-## Authors
-
-Tim Kamsma
-
-Jelle Jasper Teijema
-
-
-# License
-
-This extension is released under the MIT License.
-
-# Contact
-
-This work is part of  https://doi.org/10.48550/arXiv.2505.13451. For questions, please contact t.m.kamsma@uu.nl

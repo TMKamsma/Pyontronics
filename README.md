@@ -89,6 +89,6 @@ Jelle Jasper Teijema
 
 ## Contact
 
-For questions, please contact t.m.kamsma@uu.nl
+This work is part of  https://doi.org/10.48550/arXiv.2505.13451. For questions, please contact t.m.kamsma@uu.nl
 
 Project homepage: [https://github.com/TMKamsma/Pyontronics](https://github.com/TMKamsma/Pyontronics)
