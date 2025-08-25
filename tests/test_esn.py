@@ -1,7 +1,11 @@
 import pytest
 import numpy as np
+import sys
 from pyontronics import EchoStateNetwork, PulseEchoStateNetwork
 from pyontronics.activators import GinfActivator, NCNM_activator
+from pyontronics import visualization
+
+# ===== Fixtures =====
 
 @pytest.fixture
 def default_esn():
@@ -132,6 +136,10 @@ def test_mismatched_lengths_timestep(default_esn):
     targets = np.random.randn(19, esn.output_dim)
     with pytest.raises(ValueError):
         esn.fit(inputs, targets)
+
+def test_physical_length(default_esn):
+    esn = default_esn
+    assert esn.physical_length == pytest.approx(122, abs=1)
 
 # ===== Tests for PulseEchoStateNetwork (Pulse Mode) =====
 
@@ -301,3 +309,32 @@ def test_ginf_repr_str(ginf_activator_default):
 def test_ncnm_repr_str(ncnm_activator_default):
     assert isinstance(str(ncnm_activator_default), str)
     assert isinstance(repr(ncnm_activator_default), str)
+
+# ===== Visualization Tests =====
+
+def test_visualize_reservoir_no_error(default_esn):
+    esn = default_esn
+    inputs = np.random.randn(50, esn.input_dim)
+    targets = np.random.randn(50, esn.output_dim)
+    esn.fit(inputs, targets)
+    try:
+        visualization.visualize_reservoir(esn)
+    except Exception as e:
+        pytest.fail(f"visualize_reservoir raised an exception: {e}")
+
+def test_visualize_reservoir_with_labels_no_error(default_esn):
+    esn = default_esn
+    inputs = np.random.randn(50, esn.input_dim)
+    targets = np.random.randn(50, esn.output_dim)
+    esn.fit(inputs, targets)
+    try:
+        visualization.visualize_reservoir(default_esn, draw_labels=True)
+    except Exception as e:
+        pytest.fail(f"visualize_reservoir raised an exception: {e}")
+
+def test_visualize_reservoir_raises_without_networkx(default_esn, monkeypatch):
+    import importlib
+    monkeypatch.setitem(sys.modules, "networkx", None)
+    mod = importlib.reload(visualization)
+    with pytest.raises(ImportError):
+        mod.visualize_reservoir(default_esn)
