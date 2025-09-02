@@ -1,11 +1,23 @@
-import networkx as nx
+try:
+    import networkx as nx
+except ImportError:
+    nx = None
+
 import matplotlib.pyplot as plt
 from pyontronics import EchoStateNetwork
+import matplotlib.colors as mcolors
+
 
 def visualize_reservoir(esn: EchoStateNetwork, draw_labels=False):
     """
     Visualizes the ESN as a directed graph with NetworkX.
     """
+
+    if nx is None:
+        raise ImportError(
+            "networkx is required for visualization"
+            "Install it with 'pip install pyontronics[graph]'"
+        )
 
     G = nx.DiGraph()
     input_nodes = [f"inp_{i}" for i in range(esn.input_dim)]
@@ -98,12 +110,7 @@ def visualize_reservoir(esn: EchoStateNetwork, draw_labels=False):
         """
         Returns RGBA colors with alpha scaled by |weight|.
         """
-        import matplotlib.colors as mcolors
-
-        if weights:
-            max_w = max(abs(w) for w in weights)
-        else:
-            max_w = 1e-9
+        max_w = max(abs(w) for w in weights)
 
         colors = []
         for w in weights:

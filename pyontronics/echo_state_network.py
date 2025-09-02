@@ -70,16 +70,19 @@ class EchoStateNetwork:
                 "spectral_radius must be < leaking_rate if guarantee_ESP is True."
             )
 
-        if not isinstance(self.apply_dynamics_per_step_size, int) or self.apply_dynamics_per_step_size < 1:
+        if (
+            not isinstance(self.apply_dynamics_per_step_size, int)
+            or self.apply_dynamics_per_step_size < 1
+        ):
             raise ValueError("apply_dynamics_per_step_size must be a positive integer")
-        
+
         if self.choose_W_in:
             # Validate custom input weights
             if not isinstance(self.W_in_input, np.ndarray):
                 raise TypeError(
                     f"W_in_input must be a numpy array, got {type(self.W_in_input)}"
                 )
-                
+
             if self.W_in_input.shape != (self.reservoir_size, self.input_dim):
                 raise ValueError(
                     f"W_in_input must have shape {(self.reservoir_size, self.input_dim)}, "
@@ -124,7 +127,9 @@ class EchoStateNetwork:
         """Creates input weight matrix of shape (reservoir_size, input_dim)."""
         if self.choose_W_in:
             # Return self chosen W_in
-            return self.W_in_input.copy()  # Return a copy to prevent external modifications
+            return (
+                self.W_in_input.copy()
+            )  # Return a copy to prevent external modifications
         else:
             # Default random initialization
             return (
@@ -170,9 +175,11 @@ class EchoStateNetwork:
         substep_size = self.step_size / self.apply_dynamics_per_step_size
         alpha = substep_size / self.time_scale
         activation_input = np.dot(self.W_in, u) + np.dot(self.W_res, x)
-            
+
         for _ in range(self.apply_dynamics_per_step_size):
-            x = (1 - self.leaking_rate * alpha) * x + alpha * self.activation(activation_input)
+            x = (1 - self.leaking_rate * alpha) * x + alpha * self.activation(
+                activation_input
+            )
         return x
 
     def fit(self, inputs, targets):
@@ -181,10 +188,14 @@ class EchoStateNetwork:
                             => one target per time step
         """
         if not (isinstance(inputs, np.ndarray) and inputs.ndim == 2):
-            raise ValueError("EchoStateNetwork.fit() expects 2D NumPy array for inputs.")
+            raise ValueError(
+                "EchoStateNetwork.fit() expects 2D NumPy array for inputs."
+            )
 
         if not (isinstance(targets, np.ndarray) and targets.ndim == 2):
-            raise ValueError("EchoStateNetwork.fit() expects 2D NumPy array for targets.")
+            raise ValueError(
+                "EchoStateNetwork.fit() expects 2D NumPy array for targets."
+            )
 
         if inputs.shape[0] != targets.shape[0]:
             raise ValueError(
@@ -211,10 +222,10 @@ class EchoStateNetwork:
             raise ValueError("Input and target arrays must not be empty.")
 
         if inputs.shape[0] <= self.washout:
-             raise ValueError("Input length must be longer than washout period.")    
+            raise ValueError("Input length must be longer than washout period.")
 
         n_steps = inputs.shape[0]
-        
+
         # Collect reservoir states over extended input
         states = np.zeros((n_steps, self.reservoir_size))
         x = np.zeros(self.reservoir_size)
@@ -249,7 +260,7 @@ class EchoStateNetwork:
         B = states.T @ targets
         self.W_out = np.linalg.solve(A, B).T
 
-    def predict(self, inputs, teacher_ratio = 1.0, initial_state=None):
+    def predict(self, inputs, teacher_ratio=1.0, initial_state=None):
         """
         Per-timestep: 2D NumPy (n_steps, input_dim) => outputs shape (n_steps, output_dim)
         """
@@ -257,18 +268,16 @@ class EchoStateNetwork:
             raise ValueError(
                 "EchoStateNetwork.predict() expects 2D NumPy array, but got something else."
             )
-        
+
         if self.input_dim > 1 and teacher_ratio != 1.0:
-            raise ValueError(
-                "Teacher forcing is only supported for single-input ESNs."
-            )
-        
+            raise ValueError("Teacher forcing is only supported for single-input ESNs.")
+
         if inputs.shape[0] <= self.washout_inference:
-             raise ValueError("Input length must be longer than washout_inference.") 
-        
+            raise ValueError("Input length must be longer than washout_inference.")
+
         n_steps = inputs.shape[0]
 
-        teacher_steps = int(n_steps*teacher_ratio)
+        teacher_steps = int(n_steps * teacher_ratio)
         x = (
             np.zeros(self.reservoir_size)
             if initial_state is None
@@ -290,13 +299,14 @@ class EchoStateNetwork:
         # Compute output at every time step
         outputs = (self.W_out @ trimmed_states.T).T
         return outputs
-    
+
     @property
     def physical_length(self) -> float:
         """Computes the physical diffusion length in micrometers."""
         tau = self.time_scale / self.leaking_rate
         D = 1e-9  # Diffusion constant in m²/s
         return np.sqrt(12 * D * tau) * 1e6  # Convert to micrometers
+
 
 class PulseEchoStateNetwork(EchoStateNetwork):
     """
@@ -378,6 +388,7 @@ class PulseEchoStateNetwork(EchoStateNetwork):
 
         return outputs
 
+
 class BandPassNetwork(EchoStateNetwork):
     """
     Echo State Network variant whose reservoir units each have their own timescale.
@@ -398,22 +409,22 @@ class BandPassNetwork(EchoStateNetwork):
         time_scale_std: float = 1.0,
         choose_timescales: bool = False,
         timescale_array_input: np.ndarray = None,
-        **esn_kwargs
+        **esn_kwargs,
     ):
         super().__init__(
             input_dim=input_dim,
             reservoir_size=reservoir_size,
             output_dim=output_dim,
-            **esn_kwargs
+            **esn_kwargs,
         )
 
         self.time_scale_std = time_scale_std
         self.choose_timescales = choose_timescales
         self.timescale_array_input = timescale_array_input
-        
+
         # Initialize timescale array
         self.timescale_array = self._initialize_timescale_array()
-        
+
         # Validate custom timescales if provided
         if self.choose_timescales:
             self._validate_custom_timescales()
@@ -421,19 +432,21 @@ class BandPassNetwork(EchoStateNetwork):
     def _validate_custom_timescales(self):
         """Validate the custom timescale array input."""
         if self.timescale_array_input is None:
-            raise ValueError("timescale_array_input cannot be None when choose_timescales=True")
-            
+            raise ValueError(
+                "timescale_array_input cannot be None when choose_timescales=True"
+            )
+
         if not isinstance(self.timescale_array_input, np.ndarray):
             raise TypeError(
                 f"timescale_array_input must be a numpy array, got {type(self.timescale_array_input)}"
             )
-            
+
         if self.timescale_array_input.shape != (self.reservoir_size,):
             raise ValueError(
                 f"timescale_array_input must have shape ({self.reservoir_size},), "
                 f"got {self.timescale_array_input.shape}"
             )
-            
+
         if np.any(self.timescale_array_input <= 0):
             raise ValueError("All timescales must be positive")
 
@@ -445,12 +458,10 @@ class BandPassNetwork(EchoStateNetwork):
         """
         if self.choose_timescales:
             return np.array(self.timescale_array_input)  # Ensure numpy array
-            
+
         # Default behavior: random timescales
         ts = np.random.normal(
-            loc=self.time_scale,
-            scale=self.time_scale_std,
-            size=self.reservoir_size
+            loc=self.time_scale, scale=self.time_scale_std, size=self.reservoir_size
         )
         return ts.clip(min=self.time_scale / 5)
 
@@ -461,11 +472,15 @@ class BandPassNetwork(EchoStateNetwork):
         substep_size = self.step_size / self.apply_dynamics_per_step_size
         alpha = substep_size / self.timescale_array
         activation_input = np.dot(self.W_in, u) + np.dot(self.W_res, x)
-        
+
         for _ in range(self.apply_dynamics_per_step_size):
-            x = (1 - self.leaking_rate * alpha) * x + alpha * self.activation(activation_input)
+            x = (1 - self.leaking_rate * alpha) * x + alpha * self.activation(
+                activation_input
+            )
         return x
-    
+
+
 class PulseBandPassNetwork(BandPassNetwork, PulseEchoStateNetwork):
     """Single‑pulse ESN whose reservoir units each have their own timescale."""
+
     pass
