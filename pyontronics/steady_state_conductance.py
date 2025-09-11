@@ -10,7 +10,7 @@ class GinfActivator:
     Physical Review Letters 130 (26), 268401
     """
     
-    def __init__(self, V_min=-2, V_max=2, resolution=200, offset=False):
+    def __init__(self, V_min=-2, V_max=2, resolution=200, offset=False, g0_shift=True):
         """
         Initializes the GinfActivator and precomputes the lookup table.
 
@@ -50,7 +50,10 @@ class GinfActivator:
 
         if offset:
             self.ginf_values -= np.mean(self.ginf_values)
-
+            
+        if not g0_shift:
+            self.ginf_values += 1
+            
     def _R(self, x):
         """Computes R(x, L)"""
         return self.Rb - (self.Rb - self.Rt) * x / self.L
@@ -109,7 +112,7 @@ class NCNM_activator:
     TM Kamsma, J Kim, K Kim, WQ Boon, C Spitoni, J Park, R van Roij
     Proceedings of the National Academy of Sciences 121 (18), e2320242121
     """
-    def __init__(self, V_min=-2, V_max=2, resolution=200, offset=False, tanh_transform = True):
+    def __init__(self, V_min=-2, V_max=2, resolution=200, offset=False, tanh_transform = True, g0_shift=True):
         """
         Initializes the GinfActivator and precomputes the lookup table.
 
@@ -155,7 +158,10 @@ class NCNM_activator:
 
         if offset:
             self.ginf_values -= np.mean(self.ginf_values)
-            
+        
+        if not g0_shift:
+            self.ginf_values += 1
+        
         if tanh_transform:
             self.ginf_values = np.tanh(self.ginf_values)
 
