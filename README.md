@@ -81,7 +81,7 @@ The dashboard requires the optuna-dashboard library. Install it using
 
 ## Authors
 
-Tim Kamsma
+Tim Maarten Kamsma
 
 Jelle Jasper Teijema
 
@@ -92,4 +92,4 @@ This extension is released under the MIT License.
 
 # Contact
 
-This work is part of  https://doi.org/10.48550/arXiv.2505.13451. For questions, please contact t.m.kamsma@uu.nl
+This work is part of [https://doi.org/10.1063/5.0273574](https://doi.org/10.1063/5.0273574). For questions, please contact t.m.kamsma@uu.nl
