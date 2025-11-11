@@ -191,7 +191,9 @@ class MemristorNetwork:
         # Calculate currents
         currents = self.conductances * (self.incidence_matrix.T @ voltages)
         
-        return voltages, currents
+        powers = currents * (self.incidence_matrix.T @ voltages)
+        
+        return voltages, currents, powers
     
     def update_memristors(self, voltages: np.ndarray, currents: np.ndarray, time: float):
         """
@@ -236,6 +238,7 @@ class MemristorNetwork:
         voltage_history = []
         current_history = []
         conductance_history = []
+        powers_history = []
         
         for step in range(num_steps):
             time = step * self.dt
@@ -244,7 +247,7 @@ class MemristorNetwork:
             imposed_voltages = self.voltage_function(time)
             
             # Solve circuit
-            voltages, currents = self.solve_circuit(imposed_voltages)
+            voltages, currents, powers = self.solve_circuit(imposed_voltages)
             
             # Update memristor states
             self.update_memristors(voltages, currents, time)
@@ -255,11 +258,13 @@ class MemristorNetwork:
                 voltage_history.append(voltages.copy())
                 current_history.append(currents.copy())
                 conductance_history.append(self.conductances.copy())
+                powers_history.append(powers)
         
         return (np.array(time_points), 
                 np.array(voltage_history), 
                 np.array(current_history), 
-                np.array(conductance_history))
+                np.array(conductance_history),
+                np.array(powers_history))
     
     def set_prediction_parameters(self, use_conductances=True, prediction_window=10, regularization=1e-4):
         """
@@ -315,7 +320,7 @@ class MemristorNetwork:
             imposed_voltages = self.voltage_function(time)
             
             # Solve circuit
-            self.voltages, currents = self.solve_circuit(imposed_voltages)
+            self.voltages, currents, powers = self.solve_circuit(imposed_voltages)
             
             # Update memristors
             self.update_memristors(self.voltages, currents, time)
@@ -361,6 +366,7 @@ class MemristorNetwork:
         
         num_steps = int(total_time / self.dt)
         predictions = np.full(num_steps, np.nan)
+        powers_history = []
         time_points = np.arange(num_steps) * self.dt
         
         # Reset network to initial state
@@ -374,7 +380,9 @@ class MemristorNetwork:
             imposed_voltages = self.voltage_function(time)
             
             # Solve circuit
-            self.voltages, currents = self.solve_circuit(imposed_voltages)
+            self.voltages, currents, powers = self.solve_circuit(imposed_voltages)
+            
+            powers_history.append(powers)
             
             # Update memristors
             self.update_memristors(self.voltages, currents, time)
@@ -383,15 +391,16 @@ class MemristorNetwork:
             features = self.get_features()
             features_with_bias = np.append(features, 1)  # Add bias term
             
-            if step >= self.prediction_window:
-                predictions[step] = features_with_bias @ self.W_out
+            #if step >= self.prediction_window:
+            predictions[step] = features_with_bias @ self.W_out
         
-        return predictions, time_points
+        return predictions, time_points, np.array(powers_history)
     
     def evaluate_prediction(self,
                             predictions: np.ndarray,
                             target_signal: np.ndarray,
                             time_points: np.ndarray,
+                            powers: Optional[np.ndarray] = None,
                             time_window: Optional[Tuple[float, float]] = None) -> Dict[str, float]:
         """
         Evaluate prediction performance for a specified time window.
@@ -440,7 +449,11 @@ class MemristorNetwork:
         else:
             nrmse = rmse / target_std
             
-        return mse, rmse, nrmse
+        if powers.any():
+            total_power = np.sum(powers,axis=1)
+            total_energy = np.sum(total_power)*self.dt
+            
+        return mse, rmse, nrmse, total_power, total_energy
     
     def plot_network_schematic(self, current_voltages=None, current_conductances=None, input_seed=42):
         """
