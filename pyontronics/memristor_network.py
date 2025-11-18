@@ -365,9 +365,14 @@ class MemristorNetwork:
             raise ValueError("Output weights must be trained first")
         
         num_steps = int(total_time / self.dt)
-        predictions = np.full(num_steps, np.nan)
-        powers_history = []
+        # predictions = np.full(num_steps, np.nan)
+        powers_history = np.zeros((num_steps, self.num_edges))
         time_points = np.arange(num_steps) * self.dt
+        
+        # Pre-allocate the feature matrix X to avoid dynamic memory allocation
+        # Shape: (num_steps, num_features + 1 bias)
+        num_features = self.num_edges if self.use_conductances else np.sum(self._free_mask)
+        X = np.ones((num_steps, num_features + 1)) # Initialize with 1s (bias column is already set)
         
         # Reset network to initial state
         self.conductances = np.ones(self.num_edges)
@@ -382,17 +387,17 @@ class MemristorNetwork:
             # Solve circuit
             self.voltages, currents, powers = self.solve_circuit(imposed_voltages)
             
-            powers_history.append(powers)
+            # Log the power per device
+            powers_history[step] = powers
             
             # Update memristors
             self.update_memristors(self.voltages, currents, time)
             
             # Get features and make prediction
-            features = self.get_features()
-            features_with_bias = np.append(features, 1)  # Add bias term
-            
-            #if step >= self.prediction_window:
-            predictions[step] = features_with_bias @ self.W_out
+            X[step, :-1] = self.get_features()
+        
+        # X shape: (N, M+1), W_out shape: (M+1,) -> Result shape: (N,)
+        predictions = X @ self.W_out
         
         return predictions, time_points, np.array(powers_history)
     
