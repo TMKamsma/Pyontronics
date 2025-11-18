@@ -212,8 +212,8 @@ class MemristorNetwork:
         # Update conductances using Euler integration
         self.conductances += dg_dt * self.dt
         
-        # Ensure conductances stay positive and below 2*g₀ (physical limits)
-        self.conductances = np.clip(self.conductances, 1e-2, 2 * self.g0)
+        # Ensure conductances stay positive and below specified value
+        self.conductances = np.clip(self.conductances, 1e-2, 10 * self.g0)
     
     def simulate(self, total_time, save_interval=0.01):
         """

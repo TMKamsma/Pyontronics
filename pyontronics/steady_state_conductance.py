@@ -10,7 +10,16 @@ class GinfActivator:
     Physical Review Letters 130 (26), 268401
     """
     
-    def __init__(self, V_min=-2, V_max=2, resolution=200, offset=False, g0_shift=True):
+    def __init__(self, 
+                 V_min=-2, 
+                 V_max=2, 
+                 Rb = 200 * 10**-9,
+                 Rt = 50 * 10**-9,
+                 L = 10 * 10**-6,
+                 cb = 0.1,
+                 sig = -0.0015,
+                 psi0 = -0.0102464,
+                 resolution=200, offset=False, g0_shift=True):
         """
         Initializes the GinfActivator and precomputes the lookup table.
 
@@ -21,19 +30,19 @@ class GinfActivator:
         - offset (bool): Offset the activator mean to 0
         """
 
-        self.Rb = 200 * 10**-9
-        self.Rt = 50 * 10**-9
-        self.L = 10 * 10**-6
+        self.Rb = Rb
+        self.Rt = Rt
+        self.L = L
         self.D = 1.0 * 10**-9
         self.epsilon = 80.23 * 8.8541878128 * 10**-12
-        self.psi0 = -0.0102464
+        self.psi0 = psi0
         self.eta = 0.001009347337765476
         self.kB = 1.38064852 * 10**-23
         self.T = 293.15
         self.eCharge = 1.60217662 * 10**-19
         self.Na = 6.0221409 * 10**23
-        self.cb = 0.1 * self.Na
-        self.sig = -0.0015 * 10**18
+        self.cb = cb * self.Na
+        self.sig = sig * 10**18
         self.w = (
             self.eCharge
             * self.D
