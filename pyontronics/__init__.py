@@ -1,5 +1,5 @@
 from .echo_state_network import EchoStateNetwork, PulseEchoStateNetwork, BandPassNetwork, PulseBandPassNetwork
-from .steady_state_conductance import GinfActivator, NCNM_activator
+from .steady_state_conductance import GinfActivator, NCNM_activator, ExperimentalActivation
 from .visualization import visualize_reservoir
 from .linear_autoregression import LinearAutoregression
 from .memristor_network import MemristorNetwork

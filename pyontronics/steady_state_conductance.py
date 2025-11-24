@@ -1,7 +1,29 @@
 import numpy as np
 from scipy.integrate import quad
 
-
+class ExperimentalActivation:
+    """
+    Activation function for e.g. experimentally measured conductances.
+    """
+    def __init__(self, 
+                 data):
+        self.data = data
+        self.volts = data[:, 0]
+        self.conds = data[:, 1]
+        
+    def activate(self, V):
+        """
+        Fast activation function using the lookup table with linear interpolation.
+        """
+        return np.interp(
+            np.clip(V, self.volts[0], self.volts[-1]),
+            self.volts,
+            self.conds,
+        )
+    
+    def get_lookup_table(self):
+        return self.volts, self.conds
+        
 class GinfActivator:
     """
     Conductance as derived in:
