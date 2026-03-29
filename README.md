@@ -146,7 +146,6 @@ This module simulates a physical circuit whose edges are memristors that obeys K
 |---|---|---|---|
 | `g0_values` | array | ones | Maximum conductance $g_0$ per memristor |
 | `tau_values` | array | ones | Memory timescale $\tau$ per memristor |
-| `orientations` | array | ones | Sign ($\pm 1$) applied to voltage in $\sigma(\pm V)$ |
 
 **Prediction parameters** (set via `set_prediction_parameters`)
 
