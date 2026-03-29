@@ -1,4 +1,4 @@
-# Pyontronics — Physical Reservoir Computing with Iontronic Memristors
+# Pyontronics, Physical Reservoir Computing with Iontronic Memristors
 
 [![DOI badge](https://zenodo.org/badge/DOI/10.5281/zenodo.15113279.svg)](https://doi.org/10.5281/zenodo.15113279)
 
