@@ -164,7 +164,7 @@ Both modules can use physically derived activation functions provided in `steady
 | Class | Device | Reference |
 |---|---|---|
 | `GinfActivator` | Conical microfluidic memristor | [Kamsma et al., *Phys. Rev. Lett.* **130**, 268401 (2023)](https://doi.org/10.1103/PhysRevLett.130.268401) |
-| `NCNM_activator` | Iontronic Nanochannel Membrane Memristor | [Kamsma et al., *PNAS* **121**, e2320242121 (2024)](https://doi.org/10.1073/pnas.2320242121) |
+| `NCNM_activator` | Iontronic Nanochannel Membrane Memristor | [Kamsma & Kim et al., *PNAS* **121**, e2320242121 (2024)](https://doi.org/10.1073/pnas.2320242121) |
 | `ExperimentalActivation` | Any device (lookup table) | User-supplied experimental data |
 
 
