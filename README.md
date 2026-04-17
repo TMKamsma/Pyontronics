@@ -28,7 +28,7 @@ pip install -r requirements.txt
 
 ---
 
-## Module 1 — Echo State Network (`echo_state_network`)
+## Module 1: Echo State Network (`echo_state_network`)
 
 The echo_state_network module of [Version v.0.2.0](https://doi.org/10.5281/zenodo.17076466) was used for the results in [T.M. Kamsma, J.J. Teijema, R. van Roij, and C. Spitoni, *Chaos* 35, 093133 (2025)](https://doi.org/10.1063/5.0273574).
 
@@ -114,7 +114,7 @@ pip install optuna optuna-dashboard
 
 ---
 
-## Module 2 — Memristor Network (`memristor_network`)
+## Module 2: Memristor Network (`memristor_network`)
 
 The memristor_network module of [Version v.0.3.1](https://doi.org/10.5281/zenodo.19314455) was used for the results in [T.M. Kamsma, Y. Gu, D. Shi, C. Spitoni, M. Dijkstra, Y. Xie, and R. van Roij, *Faraday Discussions* (2026)](https://doi.org/10.1039/D5FD00168D).
 
